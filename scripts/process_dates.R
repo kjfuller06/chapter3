@@ -21,4 +21,4 @@ fesm_md = fesm_md %>%
   filter(diffT > 0)
 
 setwd("E:/chapter3/GEDI_FESM")
-write.csv(fesm_md, "fesm_metadata_postGEDI.csv", row.names = FALSE)
+write.csv(fesm_md, "fesm_metadata_preFire.csv", row.names = FALSE)

@@ -9,7 +9,7 @@ library(lmerTest)
 
 setwd("/glade/scratch/kjfuller/data/GEDI_FESM")
 # create file with all shots and fires ####
-fesm_md = read.csv("fesm_metadata_postGEDI.csv")
+fesm_md = read.csv("fesm_metadata_preFire.csv")
 fires = c()
 for(i in fesm_md$id){
   fires = c(fires, list.files(pattern = as.character(i)))
