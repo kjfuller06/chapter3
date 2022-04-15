@@ -3,10 +3,10 @@ library(sf)
 library(tidyverse)
 library(tmap)
 
-setwd("E:/chapter3/FESM_ag5jsons_20190325_20210217")
+setwd("E:/chapter3/FESM_json")
 fesm = list.files()
 
-sf1 = read_sf(fesm[1])
+sf1 = st_read(fesm[1])
 
 setwd("E:/chapter3/FESM_ag1_20190325_20210217")
 fesmrast = list.files()
