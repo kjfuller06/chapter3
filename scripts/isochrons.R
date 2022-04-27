@@ -70,9 +70,11 @@ max(p1$time, na.rm = TRUE)
 
 # tm_shape(p2) + tm_polygons()
 
-tmap_mode("view")
-tm_shape(p1) + tm_polygons()
+tmap_mode("plot")
+t1 = tm_shape(p1) + tm_polygons(col = "ffdi_final", border.alpha = 0, breaks = c(0, 12, 25, 50, 75, 100, 300), palette = c("green", "blue", "yellow", "orange", "red", "black")) +
+  tm_shape(nsw) + tm_borders()
   # tm_shape(b1) + tm_polygons()
   # tm_shape(c1) + tm_polygons()
   # tm_shape(n1) + tm_polygons()
   # tm_shape(p2) + tm_polygons()
+tmap_save(t1, height = 7, filename = "Isochrons_FFDI.jpeg")
