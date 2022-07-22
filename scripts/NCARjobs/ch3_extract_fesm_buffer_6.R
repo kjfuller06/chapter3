@@ -44,11 +44,14 @@ g = g[p,]
 g_buffer = st_buffer(g, dist = 12.5)
 
 g_temp = exact_extract(r, g_buffer, fun = "mode", append_cols = TRUE)
-names(g_temp)[25] = "severity"
+names(g_temp)[names(g_temp) == "mode"] = "severity"
 g = left_join(g, g_temp)
 
+g = st_transform(g, crs = st_crs(r2))
+g_buffer = st_buffer(g, dist = 12.5)
+
 g_temp = exact_extract(r2, g_buffer, fun = "mode", append_cols = TRUE)
-names(g_temp)[25] = "RdNBR"
+names(g_temp)[names(g_temp) == "mode"] = "RdNBR"
 g = left_join(g, g_temp)
 
 g = g %>% 
@@ -66,6 +69,7 @@ g$lon = st_coordinates(g)[,1]
 g$lat = st_coordinates(g)[,2]
 st_geometry(g) = NULL
 
+rm(t, s, sf1, r, r2, e, p, g_temp, g_buffer, g_temp2)
 for(i in c((code + 1):(code + 99))){
   tryCatch({
     # identify crs using text-parsing
@@ -98,14 +102,14 @@ for(i in c((code + 1):(code + 99))){
     g_buffer = st_buffer(g_temp, dist = 12.5)
     
     g_temp2 = exact_extract(r, g_buffer, fun = "mode", append_cols = TRUE)
-    names(g_temp2)[25] = "severity"
+    names(g_temp2)[names(g_temp2) == "mode"] = "severity"
     g_temp = left_join(g_temp, g_temp2)
     
     g_temp = st_transform(g_temp, crs = st_crs(r2))
     g_buffer = st_buffer(g_temp, dist = 12.5)
     
     g_temp2 = exact_extract(r2, g_buffer, fun = "mode", append_cols = TRUE)
-    names(g_temp2)[25] = "RdNBR"
+    names(g_temp2)[names(g_temp2) == "mode"] = "RdNBR"
     g_temp = left_join(g_temp, g_temp2)
     
     g_temp = g_temp %>% 
@@ -127,6 +131,7 @@ for(i in c((code + 1):(code + 99))){
       g = g %>% 
         full_join(g_temp)
     }
+    rm(t, s, sf1, r, r2, e, p, g_temp, g_buffer, g_temp2)
   }, error = function(e){print(i); cat("ERROR :", conditionMessage(e), "\n")})
 }
 gedi = st_as_sf(g, coords = c("lon", "lat"), crs = targetcrs)
