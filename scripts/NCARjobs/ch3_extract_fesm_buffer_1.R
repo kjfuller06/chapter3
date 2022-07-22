@@ -15,11 +15,11 @@ gedi = st_read("g2_f3_fhist_12.5mbuffer.gpkg")
 setwd("/glade/scratch/kjfuller/data")
 fesm = list.files("FESM_json", pattern = ".json")
 # identify crs using text-parsing
-t = jsonlite::read_json(paste0("FESM_json/",fesm[1]))
+t = jsonlite::read_json(paste0("FESM_json/",fesm[code]))
 s = t$crs$properties$name
 s = substr(s, 23, 27)
 # load geojson
-sf1 = geojsonsf::geojson_sf(paste0("FESM_json/", fesm[1]))
+sf1 = geojsonsf::geojson_sf(paste0("FESM_json/", fesm[code]))
 sf1 = st_as_sf(sf1)
 
 # assign crs manually
@@ -47,6 +47,9 @@ g_temp = exact_extract(r, g_buffer, fun = "mode", append_cols = TRUE)
 names(g_temp)[names(g_temp) == "mode"] = "severity"
 g = left_join(g, g_temp)
 
+g = st_transform(g, crs = st_crs(r2))
+g_buffer = st_buffer(g, dist = 12.5)
+
 g_temp = exact_extract(r2, g_buffer, fun = "mode", append_cols = TRUE)
 names(g_temp)[names(g_temp) == "mode"] = "RdNBR"
 g = left_join(g, g_temp)
@@ -67,7 +70,7 @@ g$lat = st_coordinates(g)[,2]
 st_geometry(g) = NULL
 
 rm(t, s, sf1, r, r2, e, p, g_temp, g_buffer, g_temp2)
-for(i in c((1 + 1):(1 + 99))){
+for(i in c((code + 1):(code + 99))){
   tryCatch({
     # identify crs using text-parsing
     t = jsonlite::read_json(paste0("FESM_json/",fesm[i]))
@@ -76,10 +79,10 @@ for(i in c((1 + 1):(1 + 99))){
     # load geojson
     sf1 = geojsonsf::geojson_sf(paste0("FESM_json/", fesm[i]))
     sf1 = st_as_sf(sf1)
-
+    
     # assign crs manually
     st_crs(sf1) = as.numeric(s)
-
+    
     # load severity classification raster
     r = list.files("FESM_img", pattern = unique(sf1$IncidentId))
     r = raster(paste0("FESM_img/", r[1]))
@@ -87,26 +90,26 @@ for(i in c((1 + 1):(1 + 99))){
     # load RdNBR raster
     r2 = list.files("FESM_RdNBR", pattern = unique(sf1$IncidentId))
     r2 = raster(paste0("FESM_RdNBR/", r[1]), band = 4)
-
+    
     # create raster extent polygon
     e <- extent(r)
     p <- as(e, 'SpatialPolygons') %>% st_as_sf()
     st_crs(p) = st_crs(r)
-
+    
     # select GEDI shots and extract fire severity, remove NaNs and convert to crs of veg file
     g_temp = st_transform(gedi, crs = st_crs(r))
     g_temp = g_temp[p,]
     g_buffer = st_buffer(g_temp, dist = 12.5)
     
     g_temp2 = exact_extract(r, g_buffer, fun = "mode", append_cols = TRUE)
-    names(g_temp2)[names(g_temp) == "mode"] = "severity"
+    names(g_temp2)[names(g_temp2) == "mode"] = "severity"
     g_temp = left_join(g_temp, g_temp2)
     
     g_temp = st_transform(g_temp, crs = st_crs(r2))
     g_buffer = st_buffer(g_temp, dist = 12.5)
     
     g_temp2 = exact_extract(r2, g_buffer, fun = "mode", append_cols = TRUE)
-    names(g_temp2)[names(g_temp) == "mode"] = "RdNBR"
+    names(g_temp2)[names(g_temp2) == "mode"] = "RdNBR"
     g_temp = left_join(g_temp, g_temp2)
     
     g_temp = g_temp %>% 
@@ -128,7 +131,6 @@ for(i in c((1 + 1):(1 + 99))){
       g = g %>% 
         full_join(g_temp)
     }
-    
     rm(t, s, sf1, r, r2, e, p, g_temp, g_buffer, g_temp2)
   }, error = function(e){print(i); cat("ERROR :", conditionMessage(e), "\n")})
 }

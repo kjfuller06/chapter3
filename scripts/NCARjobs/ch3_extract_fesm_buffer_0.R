@@ -47,6 +47,9 @@ g_temp = exact_extract(r, g_buffer, fun = "mode", append_cols = TRUE)
 names(g_temp)[names(g_temp) == "mode"] = "severity"
 g = left_join(g, g_temp)
 
+g = st_transform(g, crs = st_crs(r2))
+g_buffer = st_buffer(g, dist = 12.5)
+
 g_temp = exact_extract(r2, g_buffer, fun = "mode", append_cols = TRUE)
 names(g_temp)[names(g_temp) == "mode"] = "RdNBR"
 g = left_join(g, g_temp)
@@ -99,14 +102,14 @@ for(i in c((1 + 1):(1 + 99))){
     g_buffer = st_buffer(g_temp, dist = 12.5)
     
     g_temp2 = exact_extract(r, g_buffer, fun = "mode", append_cols = TRUE)
-    names(g_temp2)[names(g_temp) == "mode"] = "severity"
+    names(g_temp2)[names(g_temp2) == "mode"] = "severity"
     g_temp = left_join(g_temp, g_temp2)
     
     g_temp = st_transform(g_temp, crs = st_crs(r2))
     g_buffer = st_buffer(g_temp, dist = 12.5)
     
     g_temp2 = exact_extract(r2, g_buffer, fun = "mode", append_cols = TRUE)
-    names(g_temp2)[names(g_temp) == "mode"] = "RdNBR"
+    names(g_temp2)[names(g_temp2) == "mode"] = "RdNBR"
     g_temp = left_join(g_temp, g_temp2)
     
     g_temp = g_temp %>% 
