@@ -31,7 +31,7 @@ r = raster(paste0("FESM_img/", r[1]))
 
 # load RdNBR raster
 r2 = list.files("FESM_RdNBR", pattern = unique(sf1$IncidentId))
-r2 = raster(paste0("FESM_RdNBR/", r[1]), band = 4)
+r2 = raster(paste0("FESM_RdNBR/", r2[1]), band = 4)
 
 # create raster extent polygon
 e <- extent(r)
@@ -89,7 +89,7 @@ for(i in c((code + 1):length(fesm))){
     
     # load RdNBR raster
     r2 = list.files("FESM_RdNBR", pattern = unique(sf1$IncidentId))
-    r2 = raster(paste0("FESM_RdNBR/", r[1]), band = 4)
+    r2 = raster(paste0("FESM_RdNBR/", r2[1]), band = 4)
 
     # create raster extent polygon
     e <- extent(r)
