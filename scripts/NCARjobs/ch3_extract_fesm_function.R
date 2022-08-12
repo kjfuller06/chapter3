@@ -1,3 +1,7 @@
+args = commandArgs()
+code = substr(args[grepl("code", args)], 6, 10)
+num = substr(args[grepl("num", args)], 5, 10)
+
 library(raster)
 library(sf)
 library(tidyverse)
