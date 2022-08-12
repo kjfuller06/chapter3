@@ -1,6 +1,6 @@
 args = commandArgs()
 code = substr(args[grepl("code", args)], 6, 10)
-num = substr(args[grepl("num", args)], 5, 10)
+num = as.numeric(substr(args[grepl("num", args)], 5, 10))
 
 library(raster)
 library(sf)
@@ -8,7 +8,7 @@ library(tidyverse)
 library(geojsonsf)
 library(exactextractr)
 
-setwd("/glade/scratch/kjfuller/data/GEDI")
+setwd("/glade/scratch/kjfuller/data/GEDI_fhist")
 gedi = st_read("g2_f4_fhist.gpkg")
 targetcrs = st_crs(gedi)
 
