@@ -1,3 +1,22 @@
+library(raster)
+library(sf)
+library(tidyverse)
+library(geojsonsf)
+library(exactextractr)
+
+setwd("/glade/scratch/kjfuller/data/GEDI")
+gedi = st_read("g2_f4_fhist.gpkg")
+targetcrs = st_crs(gedi)
+
+setwd("/glade/scratch/kjfuller/data")
+fesm = list.files("FESM_json", pattern = ".json")
+
+if(num == 701){
+  end = length(fesm)
+} else {
+  end = num + 99 
+}
+
 extFESMfun = function(x){
   # identify crs using text-parsing
   t = jsonlite::read_json(paste0("FESM_json/",fesm[x]))
@@ -57,3 +76,24 @@ extFESMfun = function(x){
   st_geometry(g) = NULL
   return(g)
 }
+g = extFESMfun(num)
+
+for(i in c((num + 1):(end))){
+  tryCatch({
+    g_temp = extFESMfun(i)
+    if(nrow(g_temp) > 0){
+      g = g %>% 
+        full_join(g_temp)
+    }
+    
+    rm(g_temp)
+  }, error = function(e){print(i); cat("ERROR :", conditionMessage(e), "\n")})
+}
+gedi = st_as_sf(g, coords = c("lon", "lat"), crs = targetcrs)
+gedi_fires = gedi %>% 
+  filter(severity != 0)
+gedi_nofires = gedi %>% 
+  filter(severity == 0)
+setwd("/glade/scratch/kjfuller/data/chapter3")
+st_write(gedi_fires, paste0("ch3_g2_f3_shotsandFESM_fires_", code, ".gpkg"), delete_dsn = TRUE)
+st_write(gedi_nofires, paste0("ch3_g2_f3_shotsandFESM_nofires_", code, ".gpkg"), delete_dsn = TRUE)
