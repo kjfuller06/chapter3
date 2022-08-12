@@ -6,7 +6,7 @@ library(geojsonsf)
 library(exactextractr)
 
 setwd("/glade/scratch/kjfuller/scripts/chapter3")
-source("extract_fesm_function.R")
+source("ch3_extract_fesm_function.R")
 
 setwd("/glade/scratch/kjfuller/data/GEDI")
 gedi = st_read("g2_f4_fhist.gpkg")
