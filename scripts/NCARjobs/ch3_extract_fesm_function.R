@@ -8,8 +8,8 @@ library(tidyverse)
 library(geojsonsf)
 library(exactextractr)
 
-setwd("/glade/scratch/kjfuller/data/GEDI_fhist")
-gedi = st_read("ch3_f4_fhist.gpkg")
+setwd("/glade/scratch/kjfuller/data/GEDI")
+gedi = st_read("ch3_f3_daterestricted.gpkg")
 targetcrs = st_crs(gedi)
 
 setwd("/glade/scratch/kjfuller/data")
