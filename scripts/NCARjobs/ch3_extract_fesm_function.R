@@ -51,35 +51,38 @@ extFESMfun = function(x){
   # select GEDI shots and extract fire severity, remove NaNs and convert to crs of veg file
   g = st_transform(gedi, crs = st_crs(r))
   g = g[p,]
-  g_buffer = st_buffer(g, dist = 12.5)
-
-  g_temp = exact_extract(r, g_buffer, fun = "mode", append_cols = TRUE)
-  names(g_temp)[names(g_temp) == "mode"] = "severity"
-  g = left_join(g, g_temp)
-
-  g = st_transform(g, crs = st_crs(r2))
-  g_buffer = st_buffer(g, dist = 12.5)
-
-  g_temp = exact_extract(r2, g_buffer, fun = "mode", append_cols = TRUE)
-  names(g_temp)[names(g_temp) == "mode"] = "RdNBR"
-  g = left_join(g, g_temp)
-
-  # select only shots that intersect with fires- keep severity == 0 in case I need to use these as a control
-  g = g %>% 
-    filter(!is.na(severity))
-  g = st_transform(g, crs = targetcrs)
-  g$fire_eD = unique(sf1$EndDate)
-  g$fire_sD = unique(sf1$StartDate)
-  g$fire_id = unique(sf1$IncidentId)
   
-  # process dates
-  g$fire_eD = as.POSIXct(strptime(g$fire_eD, format = "%Y%m%d"))
-  g$fire_sD = as.POSIXct(strptime(g$fire_sD, format = "%Y%m%d"))
-  g = g %>%
-    filter(Date < fire_sD)
-  g$lon = st_coordinates(g)[,1]
-  g$lat = st_coordinates(g)[,2]
-  st_geometry(g) = NULL
+  if(nrow(g) > 0){
+    g_buffer = st_buffer(g, dist = 12.5)
+    
+    g_temp = exact_extract(r, g_buffer, fun = "mode", append_cols = TRUE)
+    names(g_temp)[names(g_temp) == "mode"] = "severity"
+    g = left_join(g, g_temp)
+    
+    g = st_transform(g, crs = st_crs(r2))
+    g_buffer = st_buffer(g, dist = 12.5)
+    
+    g_temp = exact_extract(r2, g_buffer, fun = "mode", append_cols = TRUE)
+    names(g_temp)[names(g_temp) == "mode"] = "RdNBR"
+    g = left_join(g, g_temp)
+    
+    # select only shots that intersect with fires- keep severity == 0 in case I need to use these as a control
+    g = g %>% 
+      filter(!is.na(severity))
+    g = st_transform(g, crs = targetcrs)
+    g$fire_eD = unique(sf1$EndDate)
+    g$fire_sD = unique(sf1$StartDate)
+    g$fire_id = unique(sf1$IncidentId)
+    
+    # process dates
+    g$fire_eD = as.POSIXct(strptime(g$fire_eD, format = "%Y%m%d"))
+    g$fire_sD = as.POSIXct(strptime(g$fire_sD, format = "%Y%m%d"))
+    g = g %>%
+      filter(Date < fire_sD)
+    g$lon = st_coordinates(g)[,1]
+    g$lat = st_coordinates(g)[,2]
+    st_geometry(g) = NULL
+  }
   return(g)
 }
 g = extFESMfun(num)
