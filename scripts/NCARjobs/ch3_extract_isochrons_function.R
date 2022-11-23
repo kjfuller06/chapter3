@@ -6,140 +6,51 @@ library(exactextractr)
 
 setwd("E:/chapter3/isochrons/Progall_ffdi_v3")
 isochrons = st_read("progall_ffdi_v3.shp")
+isochrons$ID = c(1:nrow(isochrons))
 
-setwd("/glade/scratch/kjfuller/data/GEDI")
-gedi = st_read(paste0("ch3_allfiredata_prefire", x, ".gpkg"))
-targetcrs = st_crs(gedi)
-gedi = st_transform(gedi, st_crs(isochrons))
-g_buffer = st_buffer(gedi, dist = 12.5)
-g_buffer = st_intersection(g_buffer, isochrons)
-any(duplicated(g_buffer$shot_number))
-# TRUE
-dups = g_buffer[duplicated(g_buffer$shot_number),]
-dups = g_buffer |> 
-  filter(shot_number %in% dups$shot_number)
-poly_dups = isochrons[dups,]
-
-tmap_mode("view")
-tmap_options(check.and.fix = TRUE)
-tm_shape(isochrons) + tm_borders() +
-  tm_shape(dups) + tm_borders()
-
-extFESMfun = function(x){
-  # identify crs using text-parsing
-  t = jsonlite::read_json(paste0("FESM_json/",fesm[x]))
-  s = t$crs$properties$name
-  s = substr(s, 23, 27)
-  # load geojson
-  sf1 = geojsonsf::geojson_sf(paste0("FESM_json/", fesm[x]))
-  sf1 = st_as_sf(sf1)
-
-  # assign crs manually
-  st_crs(sf1) = as.numeric(s)
-
-  # load raster
-  r = list.files("FESM_img", pattern = unique(sf1$IncidentId))
-  r = raster(paste0("FESM_img/", r[1]))
-
-  # create raster extent polygon
-  e <- extent(r)
-  p <- as(e, 'SpatialPolygons') %>% st_as_sf()
-  st_crs(p) = st_crs(r)
-
-  # select GEDI shots and extract fire severity, remove NaNs and convert to crs of veg file
-  g = st_transform(gedi, crs = st_crs(r))
-  g = g[p,]
-
-  if(nrow(g) > 0){
-    g_buffer = st_buffer(g, dist = 12.5)
-
-    g_temp = exact_extract(r, g_buffer, fun = "mode", append_cols = TRUE)
-    names(g_temp)[names(g_temp) == "mode"] = "severity"
-    g = left_join(g, g_temp)
-
-    g = st_transform(g, crs = targetcrs)
-
-    # select only shots that intersect with fires- keep severity == 0 in case I need to use these as a control
-    g = g %>%
-      filter(!is.na(severity))
-
-    if(nrow(g) > 0){
-      g$fire_eD = unique(sf1$EndDate)
-      g$fire_sD = unique(sf1$StartDate)
-      g$fire_id = unique(sf1$IncidentId)
-
-      # process dates
-      g$fire_eD = as.POSIXct(strptime(g$fire_eD, format = "%Y%m%d"))
-      g$TSF.fesm = difftime(g$Date, g$fire_eD, units = "days")
-      g$TSF.fesm = as.numeric(g$TSF.fesm)
-
-      g$fire_sD = as.POSIXct(strptime(g$fire_sD, format = "%Y%m%d"))
-      g$TUF.fesm = difftime(g$fire_sD, g$Date, units = "days")
-      g$TUF.fesm = as.numeric(g$TUF.fesm)
-
-      g$lon = st_coordinates(g)[,1]
-      g$lat = st_coordinates(g)[,2]
-      st_geometry(g) = NULL
-    } else {
-      g = data.frame()
-    }
-  } else {
-    g = data.frame()
-  }
-  return(g)
-}
-g = extFESMfun(num)
-while(nrow(g) == 0){
-  g = extFESMfun(num)
-  num = num + 1
+# setwd("/glade/scratch/kjfuller/data/GEDI")
+setwd("E:/chapter3/GEDI_FESM")
+ext_progfun = function(x){
+  # load data, create new polygons, intersecting the geometries of both
+  gedi = st_read(paste0("ch3_allfiredata_prefire", x, ".gpkg"))
+  targetcrs = st_crs(gedi)
+  gedi = st_transform(gedi, st_crs(isochrons))
+  g_buffer = st_buffer(gedi, dist = 12.5)
+  g_buffer = st_intersection(g_buffer, isochrons)
+  any(duplicated(g_buffer$shot_number))
+  
+  # select the shots that overlap more than one fire progression area
+  dups = g_buffer[duplicated(g_buffer$shot_number),]
+  dups = g_buffer |> 
+    filter(shot_number %in% dups$shot_number)
+  # calculate the area of overlap and select only the largest overlapping progression area
+  dups$overlap = st_area(dups)
+  dups_max = aggregate(data = dups, overlap ~ shot_number, FUN = max)
+  dups = left_join(dups_max, dups)
+  st_geometry(dups) = "geom"
+  
+  # join all data together again
+  dups = dups |> 
+    dplyr::select(-overlap)
+  g_buffer = g_buffer |> 
+    filter(!shot_number %in% dups$shot_number)
+  g_buffer = rbind(g_buffer, dups)
+  any(duplicated(g_buffer$shot_number))
+  
+  # merge extracted fire progression data to GEDI info and write to file
+  st_geometry(g_buffer) = NULL
+  gedi$lon = st_coordinates(gedi)[,1]
+  gedi$lat = st_coordinates(gedi)[,2]
+  st_geometry(gedi) = NULL
+  
+  gedi = left_join(g_buffer, gedi)
+  gedi = st_as_sf(gedi, coords = c("lon", "lat"), crs = targetcrs)
+  st_write(gedi, paste0("ch3_isochrons_prefire", x, ".gpkg"), delete_dsn = T)
 }
 
-for(i in c((num):(end))){
-  tryCatch({
-    g_temp = extFESMfun(i)
-    if(nrow(g_temp) > 0){
-      g = g %>%
-        full_join(g_temp)
-    }
-
-    rm(g_temp)
-  }, error = function(e){print(i); cat("ERROR :", conditionMessage(e), "\n")})
-}
-gedi = st_as_sf(g, coords = c("lon", "lat"), crs = targetcrs)
-gedi_fires = gedi %>%
-  filter(severity != 0)
-gedi_nofires = gedi %>%
-  filter(severity == 0)
-setwd("/glade/scratch/kjfuller/data/chapter3")
-st_write(gedi_fires, paste0("ch3_shotsandFESM_fires_", code, ".gpkg"), delete_dsn = TRUE)
-st_write(gedi_nofires, paste0("ch3_shotsandFESM_nofires_", code, ".gpkg"), delete_dsn = TRUE)
-
-# # combine individual files
-# ## fires
-# setwd("/glade/scratch/kjfuller/data/chapter3")
-# fires = list.files(pattern = "_fires_")
-# l = list()
-# a = 1
-# for(i in c(1:length(fires))){
-#   l_temp = st_read(fires[[i]])
-#   if(nrow(l_temp) > 0){
-#     l[[a]] = l_temp
-#     a = a + 1
-#   }
-# }
-# fires = bind_rows(l)
-# st_write(fires, "ch3_shotsandFESM_fires.gpkg", delete_dsn = T)
-# 
-# ## no fires
-# nofires = list.files(pattern = "_nofires_")
-# l = list()
-# a = 1
-# for(i in c(1:length(nofires))){
-#   l_temp = st_read(nofires[[i]])
-#   if(nrow(l_temp) > 0){
-#     l[[a]] = l_temp
-#     a = a + 1
-#   }
-# }
-# nofires = bind_rows(l)
-# st_write(nofires, "ch3_shotsandFESM_nofires.gpkg", delete_dsn = T)
+ext_progfun(7)
+ext_progfun(14)
+ext_progfun(30)
+ext_progfun(60)
+ext_progfun(90)
+ext_progfun(180)
