@@ -74,6 +74,7 @@ extFESMfun = function(x){
   }
   return(g)
 }
+g = extFESMfun(num)
 while(nrow(g) == 0){
   g = extFESMfun(num)
   num = num + 1
