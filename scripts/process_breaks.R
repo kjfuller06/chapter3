@@ -36,6 +36,13 @@ water$startdate = as.POSIXct(substr(water$startdate, 1, 8), format = "%Y%m%d")
 summary(water$startdate)
 water = water |> 
   filter(startdate < "2020-03-02")
+head(water)
+## perenniality of 1 == "perennial"
+## perenniality of 2 == "non-perennial"
+## perenniality of 3 == "mainly dry
+water = water |> 
+  filter(perenniality == 1)
+## tunnel-siphons (underground waterways) are not listed as perennial, no need to filter
 
 setwd("E:/chapter3/fire lines/")
 firelines = geojson_sf("ClassifiedFireTrail_EPSG4326_edit.json")
