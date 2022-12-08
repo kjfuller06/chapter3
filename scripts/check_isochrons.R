@@ -54,6 +54,20 @@ min(p1$lasttim, na.rm = TRUE)
 max(p1$time, na.rm = TRUE)
 ## Aug 2019 to Mar 2020
 
+stats = data.frame(Site = unique(p1$station))
+setwd("D:/chapter3/data")
+bom = read.csv(file = "BoMwindspeedstations.csv")
+stats = full_join(stats, bom) |> 
+  dplyr::select(Site, Lat, Lon)
+stats$agency = NA
+stats$agency[is.na(stats$Lat)] = "RFS"
+stats$agency[!is.na(stats$Lat)] = "BoM"
+stats = stats |> 
+  dplyr::select(agency, Site)
+names(stats)[2] = "stationID"
+stats = stats[order(stats$agency),]
+write.csv(stats, "WeatherStations.csv", row.names = F)
+
 # bound = st_bbox(n1) %>% 
 #   st_as_sfc()
 # tm_shape(p1, bbox = bound) + tm_polygons() + tm_shape(nsw) + tm_borders()
