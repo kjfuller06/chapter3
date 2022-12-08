@@ -26,23 +26,8 @@ rail = rail |>
 ## type 3 is "intunnel" based on online portal data check
 rail = rail |> 
   filter(railontype != 3)
-
-setwd("E:/chapter3/waterways/")
-water = geojson_sf("HydroLine_EPSG4326_edit.json")
-water$enddate = as.POSIXct(substr(water$enddate, 1, 8), format = "%Y%m%d")
-summary(water$enddate)
-# # end dates all after the year 3000
-water$startdate = as.POSIXct(substr(water$startdate, 1, 8), format = "%Y%m%d")
-summary(water$startdate)
-water = water |> 
-  filter(startdate < "2020-03-02")
-head(water)
-## perenniality of 1 == "perennial"
-## perenniality of 2 == "non-perennial"
-## perenniality of 3 == "mainly dry
-water = water |> 
-  filter(perenniality == 1)
-## tunnel-siphons (underground waterways) are not listed as perennial, no need to filter
+rail = rail |> 
+  dplyr::select(geometry)
 
 setwd("E:/chapter3/fire lines/")
 firelines = geojson_sf("ClassifiedFireTrail_EPSG4326_edit.json")
@@ -66,3 +51,38 @@ roads = roads |>
 ## type 3 is "intunnel" based on online portal data check
 roads = roads |> 
   filter(railontype != 3)
+
+setwd("E:/chapter3/waterways/")
+water = geojson_sf("HydroLine_EPSG4326_edit.json")
+water$enddate = as.POSIXct(substr(water$enddate, 1, 8), format = "%Y%m%d")
+summary(water$enddate)
+# # end dates all after the year 3000
+water$startdate = as.POSIXct(substr(water$startdate, 1, 8), format = "%Y%m%d")
+summary(water$startdate)
+water = water |> 
+  filter(startdate < "2020-03-02")
+head(water)
+## perenniality of 1 == "perennial"
+## perenniality of 2 == "non-perennial"
+## perenniality of 3 == "mainly dry"
+water = water |> 
+  filter(perenniality == 1)
+## tunnel-siphons (underground waterways) are not listed as perennial, no need to filter
+water = water |> 
+  dplyr::select(geometry)
+
+setwd("E:/chapter3/waterways/")
+water = geojson_sf("HydroArea_SPHERICAL_MERCATOR_edit.json")
+water$enddate = as.POSIXct(substr(water$enddate, 1, 8), format = "%Y%m%d")
+summary(water$enddate)
+# # end dates all after the year 3000
+water$startdate = as.POSIXct(substr(water$startdate, 1, 8), format = "%Y%m%d")
+summary(water$startdate)
+water = water |> 
+  filter(startdate < "2020-03-02")
+head(water)
+## perenniality of 1 == "perennial"
+## perenniality of 2 == "non-perennial"
+## perenniality of 3 == "mainly dry
+water = water |> 
+  filter(perenniality == 1)
