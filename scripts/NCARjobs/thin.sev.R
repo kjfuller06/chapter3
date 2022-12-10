@@ -8,27 +8,27 @@ library(UBL)
 # setwd("E:/chapter3/GEDI_FESM")
 setwd("/glade/scratch/kjfuller/data/chapter3")
 thinfun = function(x){
-  # g = st_read(paste0("ch3_forGAMs_prefire", x, "_allvars.gpkg"))
-  # g = g |> 
-  #   filter(!is.na(LFMC) & !is.na(stringybark) & !is.na(ribbonbark)) |> 
-  #   filter(fire_reg != 7 & fire_reg != 9)
-  # g$fire_reg = as.factor(g$fire_reg)
-  # targetcrs = st_crs(g)
-  # g$lon = st_coordinates(g)[,1]
-  # g$lat = st_coordinates(g)[,2]
-  # st_geometry(g) = NULL
-  # 
-  # l = list()
-  # for(i in c(1:length(unique(g$fire_reg)))){
-  #   g_temp = g |> 
-  #     filter(fire_reg == unique(g$fire_reg)[i])
-  #   l[[i]] = as.data.frame(thin.algorithm(data.frame(long = g_temp$lon, lat = g_temp$lat), thin.par = 1, reps = 1))
-  #   l[[i]] = g |> 
-  #     inner_join(l[[i]], by = c("lon" = "Longitude", "lat" = "Latitude"))
-  # }
-  # g_thin = bind_rows(l)
-  # g_thin = st_as_sf(g_thin, coords = c("lon", "lat"), crs = targetcrs)
-  # st_write(g_thin, paste0("ch3_forGAMs_prefire", x, "_thinned1.gpkg"))
+  g = st_read(paste0("ch3_forGAMs_prefire", x, "_allvars.gpkg"))
+  g = g |>
+    filter(!is.na(LFMC) & !is.na(stringybark) & !is.na(ribbonbark)) |>
+    filter(fire_reg != 7 & fire_reg != 9)
+  g$fire_reg = as.factor(g$fire_reg)
+  targetcrs = st_crs(g)
+  g$lon = st_coordinates(g)[,1]
+  g$lat = st_coordinates(g)[,2]
+  st_geometry(g) = NULL
+
+  l = list()
+  for(i in c(1:length(unique(g$fire_reg)))){
+    g_temp = g |>
+      filter(fire_reg == unique(g$fire_reg)[i])
+    l[[i]] = as.data.frame(thin.algorithm(data.frame(long = g_temp$lon, lat = g_temp$lat), thin.par = 1, reps = 1))
+    l[[i]] = g |>
+      inner_join(l[[i]], by = c("lon" = "Longitude", "lat" = "Latitude"))
+  }
+  g_thin = bind_rows(l)
+  g_thin = st_as_sf(g_thin, coords = c("lon", "lat"), crs = targetcrs)
+  st_write(g_thin, paste0("ch3_forGAMs_prefire", x, "_thinned1.gpkg"))
   
   g = st_read(paste0("ch3_forGAMs_prefire", x, "_thinned1.gpkg"))
   targetcrs = st_crs(g)
