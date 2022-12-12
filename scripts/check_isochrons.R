@@ -68,6 +68,9 @@ names(stats)[2] = "stationID"
 stats = stats[order(stats$agency),]
 write.csv(stats, "WeatherStations.csv", row.names = F)
 
+setwd("D:/chapter3/data")
+bom = st_read("available_100km_stations.shp")
+
 # bound = st_bbox(n1) %>% 
 #   st_as_sfc()
 # tm_shape(p1, bbox = bound) + tm_polygons() + tm_shape(nsw) + tm_borders()
