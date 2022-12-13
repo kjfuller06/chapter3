@@ -28,19 +28,19 @@ gamfun = function(sev){
   
   set.seed(5)
   gam1 = bam(severity ~
-               s(elevation, k = 80) +
-               s(slope) +
-               s(northness, k = 80) +
-               s(eastness, k = 80) +
-               s(stringybark) +
-               s(ribbonbark, k = 80) +
-               s(LFMC, k = 160) +
-               s(VPD, k = 160) +
-               s(ffdi_final, k = 80) +
-               s(rh98, k = 80) +
-               s(cover_z_1, k = 80) +
-               s(over_cover) +
-               s(fhd_normal, k = 80) +
+               s(elevation, k = 160) +
+               s(slope, k = 80) +
+               s(northness, k = 160) +
+               s(eastness, k = 160) +
+               s(stringybark, k = 40) +
+               s(ribbonbark, k = 160) +
+               s(LFMC, k = 320) +
+               s(VPD, k = 320) +
+               s(ffdi_final, k = 160) +
+               s(rh98, k = 160) +
+               s(cover_z_1, k = 160) +
+               s(over_cover, k = 40) +
+               s(fhd_normal, k = 160) +
                FireTypeCategoryId,
              data = train,
              family = binomial,
