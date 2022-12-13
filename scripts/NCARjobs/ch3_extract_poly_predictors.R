@@ -27,6 +27,14 @@ extractfun = function(x){
   g = st_read("progall_ffdi_v3.shp")
   g$ID = c(1:nrow(g))
   targetcrs = st_crs(g)
+  g$poly_sD = as.Date(g$lasttim)
+  g$poly_eD = as.Date(g$time)
+  g$progtime = difftime(g$poly_eD, g$poly_sD, units = "hours")
+  g$progtime = as.numeric(g$progtime)
+  g = g |> 
+    filter(progtime > 0) |> 
+    filter(progtime <= 24)
+  g$prog = g$area/g$progtime
 
   g_agg = g |> 
     right_join(gedi)
@@ -36,21 +44,12 @@ extractfun = function(x){
   g_agg3 = aggregate(data = g_agg, over_cover ~ ID, FUN = median)
   g_agg4 = aggregate(data = g_agg, fhd_normal ~ ID, FUN = median)
   
-  # calculate the mode of categorical variables
-  g_agg5 = aggregate(data = g_agg, fire_reg ~ ID, FUN = function(x){
-    ux <- unique(x)
-    ux[which.max(tabulate(match(x, ux)))]
-  })
-  
   g = g |> 
     left_join(g_agg1) |> 
     left_join(g_agg2) |> 
     left_join(g_agg3) |> 
-    left_join(g_agg4) |> 
-    left_join(g_agg5)
-  
-  ## need to go back and extract severity data- maybe also go back and use an earlier version of GEDI shots
-  
+    left_join(g_agg4)
+
   # load rasters
   # setwd("D:/chapter1/other_data/Final/terrain variables")
 
@@ -123,12 +122,8 @@ extractfun = function(x){
     
     r = raster(lfmc_temp$files[1])
 
-    g_buffer = st_buffer(g_temp, dist = 12.5)
-
-    g_temp2 = exact_extract(r, g_buffer, fun = "mode", append_cols = TRUE)
-    names(g_temp2)[names(g_temp2) == "mode"] = "LFMC"
-    g_temp2$LFMC_sD = lfmc_temp$date[1]
-    g_temp = left_join(g_temp, g_temp2)
+    g_temp$LFMC = raster::extract(r, g_temp, method = 'simple', fun = median)
+    g_temp$LFMC_sD = lfmc_temp$date[1]
 
     if(any(is.na(g_temp$LFMC))){
       g_temp2 = g_temp |>
@@ -141,12 +136,7 @@ extractfun = function(x){
         
         r = raster(lfmc_temp$files[1])
         
-        g_buffer = st_buffer(g_temp2, dist = 12.5) |>
-          dplyr::select(-LFMC)
-        
-        g_temp3 = exact_extract(r, g_buffer, fun = "mode", append_cols = TRUE)
-        names(g_temp3)[names(g_temp3) == "mode"] = "LFMC"
-        g_temp2 = left_join(g_temp2, g_temp3)
+        g_temp2$LFMC = raster::extract(r, g_temp2, method = 'simple', fun = median)
         g_temp2$LFMC_sD = lfmc_temp$date[1]
         
         g_temp = g_temp |>
@@ -178,18 +168,10 @@ extractfun = function(x){
     vpd_temp = vpd_temp |>
       filter(as.numeric(difftime(min(g_temp$poly_eD), date)) >= 0)
     
-    r = terra::rast(vpd_temp$files)
+    r = raster::stack(vpd_temp$files)
     
-    g_buffer = st_buffer(g_temp, dist = 12.5)
-    
-    g_temp2 = exact_extract(r, g_buffer, fun = "mode", append_cols = F)
-    g_temp2$shot_number = g_temp$shot_number
-    g_temp2 = g_temp2 |> 
-      pivot_longer(cols = contains("mode"), values_to = "VPD")
-    g_temp2 = aggregate(data = g_temp2, VPD ~ shot_number, FUN = median)
-    
-    g_temp2$VPD_sD = vpd_temp$date[1]
-    g_temp = left_join(g_temp, g_temp2)
+    g_temp$VPD = median(raster::extract(r, g_temp, method = 'simple', fun = median))
+    g_temp$VPD_sD = vpd_temp$date[1]
     
     l[[i]] = g_temp
     print(paste0("VPD ", i))
@@ -209,3 +191,5 @@ extractfun(30)
 extractfun(60)
 extractfun(90)
 extractfun(180)
+
+## still need to extract: fire regime types (in order to restrict less representative veg types), fire type categories (FESM directly), distance to roads, distance to water
