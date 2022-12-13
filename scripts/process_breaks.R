@@ -13,21 +13,21 @@ isochrons$lasttim = as.POSIXct(isochrons$lasttim)
 # isochrons$area_check = st_area(isochrons)
 ## measurements are the same, do not apear to be cumulative- each polygon is measured separately; the variable "area" is in km
 
-# load predictor variables
-setwd("E:/chapter3/railways/")
-rail = geojson_sf("Railway_EPSG4326_edit.json")
-# rail$enddate = as.POSIXct(substr(rail$enddate, 1, 8), format = "%Y%m%d")
-# summary(rail$enddate)
-## end dates all after the year 3000
-rail$startdate = as.POSIXct(substr(rail$startdate, 1, 8), format = "%Y%m%d")
-summary(rail$startdate)
-rail = rail |> 
-  filter(startdate < "2020-03-02")
-## type 3 is "intunnel" based on online portal data check
-rail = rail |> 
-  filter(railontype != 3)
-rail = rail |> 
-  dplyr::select(geometry)
+# # load predictor variables
+# setwd("E:/chapter3/railways/")
+# rail = geojson_sf("Railway_EPSG4326_edit.json")
+# # rail$enddate = as.POSIXct(substr(rail$enddate, 1, 8), format = "%Y%m%d")
+# # summary(rail$enddate)
+# ## end dates all after the year 3000
+# rail$startdate = as.POSIXct(substr(rail$startdate, 1, 8), format = "%Y%m%d")
+# summary(rail$startdate)
+# rail = rail |> 
+#   filter(startdate < "2020-03-02")
+# ## type 3 is "intunnel" based on online portal data check
+# rail = rail |> 
+#   filter(railontype != 3)
+# rail = rail |> 
+#   dplyr::select(geometry)
 
 setwd("E:/chapter3/fire lines/")
 firelines = geojson_sf("ClassifiedFireTrail_EPSG4326_edit.json")
@@ -74,8 +74,8 @@ water = water |>
 setwd("E:/chapter3/waterways/")
 water = geojson_sf("HydroArea_SPHERICAL_MERCATOR_edit.json")
 water$enddate = as.POSIXct(substr(water$enddate, 1, 8), format = "%Y%m%d")
-summary(water$enddate)
-# # end dates all after the year 3000
+summary(water)
+## end dates all after the year 3000
 water$startdate = as.POSIXct(substr(water$startdate, 1, 8), format = "%Y%m%d")
 summary(water$startdate)
 water = water |> 
