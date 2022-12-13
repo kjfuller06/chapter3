@@ -4,7 +4,7 @@ library(tidyverse)
 library(tidymodels)
 library(mgcv)
 
-# setwd("E:/chapter3/GEDI_FESM")
+# setwd("E:/chapter3/for GAMs")
 x = 180
 gamfun = function(sev){
   setwd("/glade/scratch/kjfuller/data/chapter3")
@@ -14,6 +14,7 @@ gamfun = function(sev){
   g$log_string = log(g$stringybark)
   g$log_ribbon = log(g$ribbonbark)
   g$severity = as.factor(g$severity)
+  g$FireTypeCategoryId = as.factor(g$FireTypeCategoryId)
   
   sb = g %>%
     initial_split(strata = severity, prop = 7/10, seed = 5)
@@ -27,18 +28,20 @@ gamfun = function(sev){
   
   set.seed(5)
   gam1 = bam(severity ~
+               s(elevation, k = 80) +
                s(slope) +
-               s(northness) +
-               s(eastness) +
+               s(northness, k = 80) +
+               s(eastness, k = 80) +
                s(stringybark) +
-               s(ribbonbark) +
-               s(LFMC, k = 80) +
-               s(VPD, k = 80) +
-               s(ffdi_final) +
-               s(rh98),
-               # s(cover_z_1) +
-               # s(over_cover) +
-               # s(fhd_normal),
+               s(ribbonbark, k = 80) +
+               s(LFMC, k = 160) +
+               s(VPD, k = 160) +
+               s(ffdi_final, k = 80) +
+               s(rh98, k = 80) +
+               s(cover_z_1, k = 80) +
+               s(over_cover) +
+               s(fhd_normal, k = 80) +
+               FireTypeCategoryId,
              data = train,
              family = binomial,
              method = "fREML")
@@ -69,8 +72,6 @@ gamfun = function(sev){
   print("*******************  anova *********************")
   print(anova(gam1))
   
-  gc()
-  
   # # extract test R^2
   # print("***************** test R^2 values *********************")
   # cl = makeCluster(72)
@@ -94,15 +95,15 @@ gamfun = function(sev){
   # print("test adjR^2 = ")
   # print(R2adj)
   
-  # plot
-  jpeg(paste0(modelnom, "_effectplots.jpeg"), width = 3000, height = 2000, res = 200, units = "px")
-  plot(gam1, pages = 1,
-       all.terms = T,
-       rug = T,
-       se = T,
-       shade = T,
-       shift = coef(gam1)[1])
-  dev.off()
+  # # plot
+  # jpeg(paste0(modelnom, "_effectplots.jpeg"), width = 3000, height = 2000, res = 200, units = "px")
+  # plot(gam1, pages = 1,
+  #      all.terms = T,
+  #      rug = T,
+  #      se = T,
+  #      shade = T,
+  #      shift = coef(gam1)[1])
+  # dev.off()
 }
 gamfun(sev = 1)
 gamfun(sev = 2)
