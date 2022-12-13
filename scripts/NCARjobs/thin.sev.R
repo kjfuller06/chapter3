@@ -8,7 +8,7 @@ library(UBL)
 # setwd("E:/chapter3/GEDI_FESM")
 setwd("/glade/scratch/kjfuller/data/chapter3")
 thinfun = function(x){
-  g = st_read(paste0("ch3_forGAMs_prefire", x, "_allvars.gpkg"))
+  g = st_read(paste0("ch3_forGAMs_prefire", x, "_allvars2.gpkg"))
   g = g |>
     filter(!is.na(LFMC) & !is.na(stringybark) & !is.na(ribbonbark)) |>
     filter(fire_reg != 7 & fire_reg != 9)
@@ -28,7 +28,7 @@ thinfun = function(x){
   }
   g_thin = bind_rows(l)
   g_thin = st_as_sf(g_thin, coords = c("lon", "lat"), crs = targetcrs)
-  st_write(g_thin, paste0("ch3_forGAMs_prefire", x, "_thinned1.gpkg"))
+  st_write(g_thin, paste0("ch3_forGAMs_prefire", x, "_thinned1.gpkg"), delete_dsn = T)
   
   g = st_read(paste0("ch3_forGAMs_prefire", x, "_thinned1.gpkg"))
   targetcrs = st_crs(g)
@@ -48,6 +48,7 @@ thinfun = function(x){
                   eastness,
                   # TSF.hist,
                   ffdi_final,
+                  FireTypeCategoryId,
                   LFMC,
                   VPD,
                   stringybark,
@@ -56,6 +57,7 @@ thinfun = function(x){
                   lat)
   g$fire_reg = as.factor(g$fire_reg)
   g$severity = as.factor(g$severity)
+  g$FireTypeCategoryId = as.factor(g$FireTypeCategoryId)
   
   for(i in c(1:length(unique(g$severity)))){
     g1 = g |> 
