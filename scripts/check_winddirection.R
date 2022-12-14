@@ -24,7 +24,7 @@ wind = slope - angle
 wind[wind < 0] = wind[wind < 0] + 360
 
 diff = slope - wind
-diff[diff < 0] = diff[diff < 0] + 360
+# diff[diff < 0] = diff[diff < 0] + 360
 northness = cos(diff * pi / 180)
 # eastness = sin(diff * pi / 180)
 
@@ -46,6 +46,6 @@ wind[wind < 0] = wind[wind < 0] + 360
 diff = slope - wind
 diff[diff < 0] = diff[diff < 0] + 360
 northness = cos(diff * pi / 180)
-eastness = sin(diff * pi / 180)
+# eastness = sin(diff * pi / 180)
 
 plot(northness ~ angle, ylim = c(-1, 1))
