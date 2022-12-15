@@ -294,3 +294,5 @@ extractfun(30)
 extractfun(60)
 extractfun(90)
 extractfun(180)
+
+## still need to extract: number of dwellings within fire area (extracted for polygon data)
