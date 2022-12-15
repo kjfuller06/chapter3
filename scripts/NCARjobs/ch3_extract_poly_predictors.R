@@ -303,5 +303,5 @@ extractfun(60)
 extractfun(90)
 extractfun(180)
 
-## still need to extract: fire type categories (FESM directly), distance to roads (or number of dwellings), distance to water 
+## still need to extract: fire type categories (FESM directly), distance to roads and distance to water (take the min of both); number of dwellings
 ## aspect, wind direction done, fire regime types (in order to restrict less representative veg types) done
