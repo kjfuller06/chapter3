@@ -86,3 +86,28 @@ head(water)
 ## perenniality of 3 == "mainly dry
 water = water |> 
   filter(perenniality == 1)
+
+setwd("E:/chapter3/dwellings")
+houses = geojson_sf("Property_EPSG4326_edit.json")
+st_area(houses[1:10,])
+## ran from ~420 m^2 to ~1021 m^2
+houses$enddate = as.POSIXct(substr(houses$enddate, 1, 8), format = "%Y%m%d")
+summary(houses)
+## end dates all after the year 3000
+houses$startdate = as.POSIXct(substr(houses$startdate, 1, 8), format = "%Y%m%d")
+summary(houses$startdate)
+houses = houses |> 
+  filter(startdate < "2020-03-02")
+head(houses)
+nrow(houses)
+## 3,725,375
+houses = houses |> filter(propertytype == 1)
+nrow(houses)
+## 3,721,722
+library(tmap)
+tmap_mode("view")
+tm_shape(houses[1:10,]) + tm_polygons()
+
+sf::sf_use_s2(FALSE)
+houses = st_centroid(houses)
+houses
