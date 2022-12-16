@@ -4,11 +4,13 @@ library(tidyverse)
 library(exactextractr)
 
 setwd("/glade/scratch/kjfuller/data")
-access = st_read("access_lines.gpkg")
-water = st_read("water.gpkg")
-properties = st_read()
+houses = read.csv("housing_density.csv")
+breaks = read.csv("isochron_breaks.csv")
 # setwd("E:/chapter3/from Michael")
 wind = st_read("wind_direction.gpkg")
+types = read.csv("FESM_firetypes.csv") |> 
+  dplyr::select(fire_id, category)
+types$fire_id = as.factor(types$fire_id)
 
 # setwd("E:/chapter3")
 # types = read.csv("FESM_firetypes.csv")
@@ -26,9 +28,9 @@ wind = st_read("wind_direction.gpkg")
 # vpd = data.frame(files = vpd)
 # vpd$date = as.Date(substr(vpd$files, 5, 12), format = "%Y%m%d")
 
-# setwd("/glade/scratch/kjfuller/data/chapter3")
 # setwd("E:/chapter3/GEDI_FESM")
 extractfun = function(x){
+  # done ##### 
   # g = st_read(paste0("ch3_severity_prefire", x, ".gpkg"))
   # targetcrs = st_crs(g)
   # g = g |>
@@ -195,22 +197,22 @@ extractfun = function(x){
   # g = full_join(g, g_temp)
   # 
   # g = st_transform(g, crs = targetcrs)
-  setwd("/glade/scratch/kjfuller/data/chapter3")
+  # setwd("/glade/scratch/kjfuller/data/chapter3")
   # st_write(g, paste0("ch3_forGAMs_prefire", x, "_allvars.gpkg"), delete_dsn = T)
   
+  # merge housing density, distance to breaks and fire types ####
   # setwd("E:/chapter3/for GAMs")
-  # g = st_read(paste0("ch3_forGAMs_prefire", x, "_allvars.gpkg"))
-  # g$fire_id = as.factor(g$fire_id)
-  # 
-  # g = g |> 
-  #   left_join(types)
-  # st_write(g, paste0("ch3_forGAMs_prefire", x, "_allvars2.gpkg"), delete_dsn = T)
-  
-  # setwd("E:/chapter3/for GAMs")
-  g = st_read(paste0("ch3_forGAMs_prefire", x, "_allvars2.gpkg"))
+  setwd("/glade/scratch/kjfuller/data/chapter3")
+  g = st_read(paste0("ch3_forGAMs_prefire", x, "_allvars.gpkg"))
   targetcrs = st_crs(g)
+  g$fire_id = as.factor(g$fire_id)
+  g = g |> 
+    left_join(houses) |> 
+    left_join(breaks) |> 
+    left_join(types)
   
-  # aspect
+  # aspect ####
+  setwd("/glade/scratch/kjfuller/data")
   r = raster("proj_dem_aspect_30m.tif")
 
   g = st_transform(g, crs = st_crs(r))
@@ -219,52 +221,52 @@ extractfun = function(x){
   g_temp = exact_extract(r, g_buffer, fun = "mode", append_cols = TRUE)
   names(g_temp)[names(g_temp) == "mode"] = "aspect"
   g = left_join(g, g_temp)
-  
-  # wind direction
+
+  # wind direction ####
   g_buffer = st_buffer(g, dist = 100000)
   g_buffer = st_transform(g_buffer, st_crs(wind))
   g = st_transform(g, st_crs(wind))
-  
+
   # select just the stations for calculating distances
-  stations = wind |> 
+  stations = wind |>
     dplyr::select(station)
   stations = stations[!duplicated(stations$station),]
-  
+
   l = list()
   for(i in c(1:nrow(g))){
     # select a buffered shot and index all stations within 100km
     g_temp = g_buffer[i,]
     stat_temp = stations[g_temp,]
-    
+
     # select the original shot and calculate distance to selected stations
-    g_temp = g |> 
+    g_temp = g |>
       filter(shot_number %in% g_temp$shot_number)
     stat_temp$dist = as.numeric(st_distance(g_temp, stat_temp))
     st_geometry(stat_temp) = NULL
     st_geometry(g_temp) = NULL
-    
+
     # if the polygon is the first, overwrite poly_sD as 24hrs before poly_eD (in minutes)
     if(min(g_temp$poly_sD) == max(g_temp$poly_eD)){
       g_temp$poly_sD = g_temp$poly_eD - 86400
     }
-    
+
     # select wind data based on polygon timeframe
-    wind_temp = wind |> 
-      filter(station %in% stat_temp$station) |> 
+    wind_temp = wind |>
+      filter(station %in% stat_temp$station) |>
       left_join(stat_temp)
-    minT = wind_temp |> 
+    minT = wind_temp |>
       filter(DateTime <= min(g_temp$poly_sD))
     minT = max(minT$DateTime, na.rm = T)
-    maxT = wind_temp |> 
+    maxT = wind_temp |>
       filter(DateTime >= max(g_temp$poly_eD))
     maxT = min(maxT$DateTime, na.rm = T)
-    wind_temp = wind_temp |> 
-      filter(DateTime >= minT) |> 
+    wind_temp = wind_temp |>
+      filter(DateTime >= minT) |>
       filter(DateTime <= maxT)
-    
+
     # calculate the median wind speed within the polygon timeframe at each selected station, join to station data
     wind_med = aggregate(data = wind_temp, winddir ~ station, FUN = median)
-    wind_temp = stat_temp |> 
+    wind_temp = stat_temp |>
       inner_join(wind_med)
     # write number of stations used for calculation
     wind_temp$windstats = nrow(wind_med)
@@ -274,18 +276,19 @@ extractfun = function(x){
     g_temp$winddiff = g_temp$aspect - g_temp$winddir
     g_temp$winddiff = cos(g_temp$winddiff * pi / 180)
     # select relevant variables for passing to final df
-    g_temp = g_temp |> 
+    g_temp = g_temp |>
       dplyr::select(shot_number,
                     winddir,
                     winddiff,
                     windstats)
-    
+
     l[[i]] = g_temp
   }
   g_temp = bind_rows(l)
   g = full_join(g, g_temp)
-  
-  st_write(g, paste0("ch3_forGAMs_prefire", x, "_allvars3.gpkg"), delete_dsn = T)
+
+  setwd("/glade/scratch/kjfuller/data/chapter3")
+  st_write(g, paste0("ch3_forGAMs_prefire", x, "_allvars2.gpkg"), delete_dsn = T)
 }
 
 extractfun(7)
@@ -294,5 +297,3 @@ extractfun(30)
 extractfun(60)
 extractfun(90)
 extractfun(180)
-
-## still need to extract: number of dwellings within fire area (extracted for polygon data)
