@@ -5,11 +5,12 @@ library(exactextractr)
 library(rgeos)
 
 setwd("/glade/scratch/kjfuller/data")
-access = st_read("access_lines.gpkg")
-# setwd("E:/chapter3/waterways")
-water = st_read("water.gpkg")
 # setwd("E:/chapter3/from Michael")
 wind = st_read("wind_direction.gpkg")
+houses = read.csv("housing_density.csv")
+breaks = read.csv("isochron_breaks.csv")
+types = read.csv("FESM_firetypes.csv") |> 
+  dplyr::select(fire_id, category)
 
 setwd("/glade/scratch/kjfuller/data/LFMC")
 # setwd("E:/chapter3/from Rachael/R project/LFMC/LFMC/GEE_LFMC/LFMC_rasters/GEE_v20May2020_RevisedMask/")
@@ -30,6 +31,7 @@ fire_reg = read.csv("fire_regimes.csv") |>
 
 setwd("/glade/scratch/kjfuller/data/chapter3")
 extractfun = function(x){
+  # load forest structure data ####
   # setwd("E:/chapter3/GEDI_FESM")
   gedi = st_read(paste0("ch3_isochrons_prefire", x, ".gpkg"))
   targetcrs = st_crs(gedi)
@@ -42,6 +44,7 @@ extractfun = function(x){
                   over_cover,
                   fhd_normal)
   
+  # load isochrons ####
   setwd("/glade/scratch/kjfuller/data")
   # setwd("E:/chapter3/isochrons/Progall_ffdi_v3")
   g = st_read("progall_ffdi_v3.shp")
@@ -55,6 +58,13 @@ extractfun = function(x){
     filter(progtime <= 24)
   g$prog = g$area/g$progtime
   
+  # merge housing density, distance to breaks, and fire types ####
+  g = g |> 
+    left_join(houses) |> 
+    left_join(breaks) |> 
+    left_join(types)
+  
+  # calculate and merge structural data ####
   g_agg = g |> 
     right_join(gedi)
   # calculate the median of continuous variables
@@ -72,7 +82,7 @@ extractfun = function(x){
   # load rasters
   # setwd("D:/chapter1/other_data/Final/terrain variables")
   
-  # elevation
+  # elevation ####
   r = raster("proj_dem_s.tif")
   
   g = st_transform(g, crs = st_crs(r))
@@ -87,7 +97,7 @@ extractfun = function(x){
     filter(!is.na(elevation))
   g = rbind(g, g_na)
   
-  # fire regime
+  # fire regimes ####
   r = raster("fuels_30m.tif")
   
   g = st_transform(g, crs = st_crs(r))
@@ -95,31 +105,31 @@ extractfun = function(x){
   g = g |> 
     left_join(fire_reg)
   
-  # slope
+  # slope ####
   r = raster("proj_dem_slope_30m.tif")
   
   g = st_transform(g, crs = st_crs(r))
   g$slope = raster::extract(r, g, method = 'simple', fun = median)
   
-  # aspect
+  # aspect ####
   r = raster("proj_dem_aspect_30m.tif")
   
   g = st_transform(g, crs = st_crs(r))
   g$aspect = raster::extract(r, g, method = 'simple', fun = median)
   
-  # northness
+  # northness ####
   r = raster("proj_dem_northness_30m.tif")
   
   g = st_transform(g, crs = st_crs(r))
   g$northness = raster::extract(r, g, method = 'simple', fun = median)
   
-  # eastness
+  # eastness ####
   r = raster("proj_dem_eastness_30m.tif")
   
   g = st_transform(g, crs = st_crs(r))
   g$eastness = raster::extract(r, g, method = 'simple', fun = median)
   
-  # bark types
+  # bark types ####
   r = raster("NSW_stringybark_distribution.tif")
   
   g = st_transform(g, crs = st_crs(r))
@@ -135,7 +145,7 @@ extractfun = function(x){
   st_write(g, paste0("ch3_forGAMs_poly_prefire", x, "_static.gpkg"), delete_dsn = T)
   # g = st_read(paste0("ch3_forGAMs_poly_prefire", x, "_static.gpkg"))
   
-  # LFMC
+  # LFMC ####
   setwd("/glade/scratch/kjfuller/data/LFMC")
   # setwd("E:/chapter3/from Rachael/R project/LFMC/LFMC/GEE_LFMC/LFMC_rasters/GEE_v20May2020_RevisedMask/")
   r = raster(lfmc$files[1])
@@ -184,7 +194,7 @@ extractfun = function(x){
   st_geometry(g_temp) = NULL
   g = full_join(g, g_temp)
   
-  # VPD
+  # VPD ####
   setwd("/glade/scratch/kjfuller/data/VPD")
   # setwd("E:/chapter3/from Rachael/VPD")
   r = raster(vpd$files[1])
@@ -213,7 +223,7 @@ extractfun = function(x){
   st_geometry(g_temp) = NULL
   g = full_join(g, g_temp)
   
-  # wind direction
+  # wind direction ####
   g = st_transform(g, crs = targetcrs)
   g_buffer = st_buffer(g, dist = 100000)
   g_buffer = st_transform(g_buffer, st_crs(wind))
@@ -287,13 +297,11 @@ extractfun = function(x){
   g_temp = bind_rows(l)
   g = full_join(g, g_temp)
   
-  # distance to water
-  extent(g)
-  r_temp = raster(ext = extent(g), res = 30, crs = crs(g))
-  dd = gDistance(water, as(r_temp,"SpatialPoints"), byid=TRUE) ## need to trouble-shoot, need to subset by date created
-  
+  # write to disk ####
   setwd("/glade/scratch/kjfuller/data/chapter3")
   st_write(g, paste0("ch3_forGAMs_prefire", x, "_poly_allvars.gpkg"), delete_dsn = T)
+  
+  print(paste0("*******************  ", x, " done  *********************"))
 }
 
 extractfun(7)
@@ -303,5 +311,5 @@ extractfun(60)
 extractfun(90)
 extractfun(180)
 
-## still need to extract: fire type categories (FESM directly), distance to roads and distance to water (take the min of both); number of dwellings
-## aspect, wind direction done, fire regime types (in order to restrict less representative veg types) done
+## still need to extract: fire type categories (FESM directly)
+## aspect, wind direction done, fire regime types (in order to restrict less representative veg types), number of dwellings, distance to roads and distance to water (take the min of both) done
