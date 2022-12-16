@@ -16,7 +16,7 @@ for(i in c(1:length(fesm))){
   st_geometry(sf1) = NULL
   sf1 = sf1 |> 
     dplyr::select(IncidentId,
-                  FireCauseId:IncidentReference,
+                  FireClass:IncidentReference,
                   IncidentName,
                   EndDate) |> 
     unique()
@@ -24,4 +24,17 @@ for(i in c(1:length(fesm))){
   
   df = rbind(df, sf1)
 }
+summary(df)
+backup = df
+df = df |> 
+  filter(FireCauseId != 24)
+
+key = read.csv("FESM_firetype_key.csv")
+df = df |> 
+  left_join(key) |> 
+  filter(!is.na(firetype))
+df |> group_by(firetype) |> tally() |> as.data.frame()
+df |> group_by(category) |> tally() |> as.data.frame()
+
 write.csv(df, "FESM_firetypes.csv", row.names = F)
+
