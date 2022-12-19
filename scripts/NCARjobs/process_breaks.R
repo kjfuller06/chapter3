@@ -51,39 +51,42 @@ library(rgeos)
 # st_write(water, "water.gpkg", delete_dsn = T)
 
 # # distance to breaks ####
-setwd("/glade/scratch/kjfuller/data")
-# setwd("E:/chapter3/isochrons/Progall_ffdi_v3")
-g = st_read("progall_ffdi_v3.shp")
-targetcrs = st_crs(g)
-g$ID = c(1:nrow(g))
-g$poly_sD = as.POSIXct(g$lasttim, format = "%Y-%m-%d %H:%M")
-g$poly_eD = as.POSIXct(g$time, format = "%Y-%m-%d %H:%M")
-g$progtime = difftime(g$poly_eD, g$poly_sD, units = "hours")
-g$progtime = as.numeric(g$progtime)
-# filter polygons
-g = g |>
-  filter(progtime > 0) |>
-  filter(progtime <= 192) ## progression time < 8 days (8 * 24 = 192)
-g = g |>
-  dplyr::select(ID, poly_sD)
-st_write(g, "isochrons_8days.gpkg", delete_dsn = T)
+# setwd("/glade/scratch/kjfuller/data")
+# # setwd("E:/chapter3/isochrons/Progall_ffdi_v3")
+# g = st_read("progall_ffdi_v3.shp")
+# targetcrs = st_crs(g)
+# g$ID = c(1:nrow(g))
+# g$poly_sD = as.POSIXct(g$lasttim, format = "%Y-%m-%d %H:%M")
+# g$poly_eD = as.POSIXct(g$time, format = "%Y-%m-%d %H:%M")
+# g$progtime = difftime(g$poly_eD, g$poly_sD, units = "hours")
+# g$progtime = as.numeric(g$progtime)
+# # filter polygons
+# g = g |>
+#   filter(progtime > 0) |>
+#   filter(progtime <= 192) ## progression time < 8 days (8 * 24 = 192)
+# g = g |>
+#   dplyr::select(ID, poly_sD)
+# st_write(g, "isochrons_8days.gpkg", delete_dsn = T)
 
+# further processing ####
 # convert features back to simple geometries, remove Z axis and convert to projected CRS
-# # setwd("E:/chapter3/waterways/")
-# water = st_read("water.gpkg")
+setwd("/glade/scratch/kjfuller/data")
+# setwd("E:/chapter3/waterways/")
+water = st_read("water.gpkg")
 water = st_transform(water, crs = targetcrs)
 water = st_zm(water, drop = TRUE, what = "ZM")
 st_write(water, "proj_water.gpkg", delete_dsn = T)
-# water = st_cast(water, "POLYGON")
-# water = st_transform(water, crs = targetcrs)
-# st_write(water, "water_polygons.gpkg", delete_dsn = T)
-# # setwd("E:/chapter3/roadways/")
-# access = st_read("access_lines.gpkg")
-# access = st_zm(access, drop = TRUE, what = "ZM")
-# access = st_cast(access, "LINESTRING")
-# access = st_transform(access, crs = targetcrs)
-# st_write(access, "access_linestrings.gpkg", delete_dsn = T)
+water = st_cast(water, "POLYGON")
+water = st_transform(water, crs = targetcrs)
+st_write(water, "water_polygons.gpkg", delete_dsn = T)
+# setwd("E:/chapter3/roadways/")
+access = st_read("access_lines.gpkg")
+access = st_zm(access, drop = TRUE, what = "ZM")
+access = st_cast(access, "LINESTRING")
+access = st_transform(access, crs = targetcrs)
+st_write(access, "access_linestrings.gpkg", delete_dsn = T)
 
+# initial distance calculation ####
 # # for each polygon, create a raster of regular cells across the surface, filter features by start date and sample the distance from each raster cell to each feature
 # l = list()
 # for(i in c(1:nrow(g))){
