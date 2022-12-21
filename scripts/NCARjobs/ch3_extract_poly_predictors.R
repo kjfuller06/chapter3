@@ -117,6 +117,24 @@ extractfun = function(x){
   g = st_transform(g, crs = st_crs(r))
   g$aspect = raster::extract(r, g, method = 'simple', fun = median)
   
+  # distance to firelines ####
+  r = raster("distancetofirelines_parallel.tif")
+  
+  g = st_transform(g, crs = st_crs(r))
+  g$firelines = raster::extract(r, g, method = 'simple', fun = median)
+  
+  # distance to roads ####
+  r = raster("distancetoroads_parallel.tif")
+  
+  g = st_transform(g, crs = st_crs(r))
+  g$roads = raster::extract(r, g, method = 'simple', fun = median)
+  
+  # distance to water ####
+  r = raster("distancetowater_parallel.tif")
+  
+  g = st_transform(g, crs = st_crs(r))
+  g$water = raster::extract(r, g, method = 'simple', fun = median)
+  
   # northness ####
   r = raster("proj_dem_northness_30m.tif")
   

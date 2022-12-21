@@ -5,7 +5,6 @@ library(exactextractr)
 
 setwd("/glade/scratch/kjfuller/data")
 houses = read.csv("housing_density.csv")
-breaks = read.csv("isochron_breaks.csv")
 # setwd("E:/chapter3/from Michael")
 wind = st_read("wind_direction.gpkg")
 types = read.csv("FESM_firetypes.csv") |> 
@@ -208,7 +207,6 @@ extractfun = function(x){
   g$fire_id = as.factor(g$fire_id)
   g = g |> 
     left_join(houses) |> 
-    left_join(breaks) |> 
     left_join(types)
   
   # aspect ####
@@ -220,6 +218,39 @@ extractfun = function(x){
 
   g_temp = exact_extract(r, g_buffer, fun = "mode", append_cols = TRUE)
   names(g_temp)[names(g_temp) == "mode"] = "aspect"
+  g = left_join(g, g_temp)
+  
+  # distance to firelines ####
+  setwd("/glade/scratch/kjfuller/data")
+  r = raster("distancetofirelines_parallel.tif")
+  
+  g = st_transform(g, crs = st_crs(r))
+  g_buffer = st_buffer(g, dist = 12.5)
+  
+  g_temp = exact_extract(r, g_buffer, fun = "mode", append_cols = TRUE)
+  names(g_temp)[names(g_temp) == "mode"] = "firelines"
+  g = left_join(g, g_temp)
+  
+  # distance to roads ####
+  setwd("/glade/scratch/kjfuller/data")
+  r = raster("distancetoroads_parallel.tif")
+  
+  g = st_transform(g, crs = st_crs(r))
+  g_buffer = st_buffer(g, dist = 12.5)
+  
+  g_temp = exact_extract(r, g_buffer, fun = "mode", append_cols = TRUE)
+  names(g_temp)[names(g_temp) == "mode"] = "roads"
+  g = left_join(g, g_temp)
+  
+  # distance to waterways ####
+  setwd("/glade/scratch/kjfuller/data")
+  r = raster("distancetowater_parallel.tif")
+  
+  g = st_transform(g, crs = st_crs(r))
+  g_buffer = st_buffer(g, dist = 12.5)
+  
+  g_temp = exact_extract(r, g_buffer, fun = "mode", append_cols = TRUE)
+  names(g_temp)[names(g_temp) == "mode"] = "water"
   g = left_join(g, g_temp)
 
   # wind direction ####
