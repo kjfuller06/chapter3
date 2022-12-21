@@ -228,7 +228,10 @@ extractfun = function(x){
   g_buffer = st_buffer(g, dist = 100000)
   g_buffer = st_transform(g_buffer, st_crs(wind))
   
-  # select just the stations for calculating distances
+  # remove all directions when windspeed == 0; select just the stations for calculating distances
+  wind = wind |> 
+    filter(windspeed != 0)
+  
   stations = wind |> 
     dplyr::select(station)
   stations = stations[!duplicated(stations$station),]
@@ -269,24 +272,38 @@ extractfun = function(x){
       filter(DateTime <= maxT)
     
     # calculate the median wind speed within the polygon timeframe at each selected station, join to station data
-    wind_med = aggregate(data = wind_temp, winddir ~ station, FUN = median)
-    names(wind_med)[2] = "wind.median"
+    winddir = aggregate(data = wind_temp, winddir ~ station, FUN = median)
+    names(winddir)[2] = "winddir"
+    windsp = aggregate(data = wind_temp, windspeed ~ station, FUN = median)
+    names(windsp)[2] = "windspeed"
+    windgt = aggregate(data = wind_temp, windgust ~ station, FUN = median)
+    names(windgt)[2] = "windgust"
+    
     wind_var = aggregate(data = wind_temp, winddir ~ station, FUN = sd)
     names(wind_var)[2] = "wind.stdev"
     wind_temp = stat_temp |> 
-      inner_join(wind_med) |> 
-      inner_join(wind_var)
+      inner_join(winddir) |> 
+      inner_join(wind_var) |> 
+      inner_join(windsp) |> 
+      inner_join(windgt)
     # write number of stations used for calculation
-    wind_temp$windstats = nrow(wind_med)
+    wind_temp$windstats = nrow(winddir)
     # create distance-based weights and calculate distance-weighted mean and wind impact index
     wind_temp$weight = 1 - (wind_temp$dist)/max(wind_temp$dist+1000)
-    g_temp$windmean = weighted.mean(wind_temp$wind.median, wind_temp$weight)
+    g_temp$winddir = weighted.mean(wind_temp$winddir, wind_temp$weight)
+    g_temp$wind_var = weighted.mean(wind_temp$wind_var, wind_temp$weight)
+    g_temp$windspeed = weighted.mean(wind_temp$windspeed, wind_temp$weight)
+    g_temp$windgust = weighted.mean(wind_temp$windgust, wind_temp$weight)
+    
     g_temp$winddiff = g_temp$aspect - g_temp$windmean
     g_temp$winddiff = cos(g_temp$winddiff * pi / 180)
     # select relevant variables for passing to final df
     g_temp = g_temp |> 
       dplyr::select(shot_number,
                     winddir,
+                    wind_var,
+                    windspeed,
+                    windgust,
                     winddiff,
                     windstats)
     
