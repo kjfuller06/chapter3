@@ -58,5 +58,5 @@ dnear = knnx.dist(data = fire_df, query = iso_df, k = 1)
 # assign the values to the NA cells in the first raster
 fire_r = iso_r
 values(fire_r) = dnear
-writeRaster(fire_r, "firelines_parallel.tif", overwrite = T)
+writeRaster(fire_r, "distancetofirelines_parallel.tif", overwrite = T)
 
