@@ -4,49 +4,10 @@ library(tidyverse)
 library(geojsonsf)
 library(rjson)
 library(rgeos)
+library(terra)
+library(FNN)
 
-# setwd("/glade/scratch/kjfuller/data")
-# firelines ####
-setwd("E:/chapter3/fire lines/")
-firelines = geojson_sf("ClassifiedFireTrail_EPSG4326_edit.json")
-firelines$startdate = as.POSIXct(substr(firelines$startdate, 1, 8), format = "%Y%m%d")
-firelines = firelines |>
-  filter(startdate < "2020-03-02")
-firelines$startdate[firelines$startdate < "2019-08-01"] = "2019-08-01"
-firelines = firelines |>
-  dplyr::select(startdate)
-firelines$type = "fireline"
-
-# roads ####
-setwd("E:/chapter3/roadways/")
-roads = geojson_sf("RoadSegment_EPSG4326_edit.json")
-roads$startdate = as.POSIXct(substr(roads$startdate, 1, 8), format = "%Y%m%d")
-roads = roads |>
-  filter(startdate < "2020-03-02") |>
-  filter(roadontype != 3)
-roads$startdate[roads$startdate < "2019-08-01"] = "2019-08-01"
-roads = roads |>
-  dplyr::select(startdate)
-roads$type = "road"
-accesslines = rbind(firelines, roads)
-st_write(accesslines, "access_lines.gpkg", delete_dsn = T)
-
-# # water ####
-# # setwd("E:/chapter3/waterways/")
-# water = geojson_sf("HydroArea_SPHERICAL_MERCATOR_edit.json")
-# water$startdate = as.POSIXct(substr(water$startdate, 1, 8), format = "%Y%m%d")
-# water = water |> 
-#   filter(startdate < "2020-03-02") |> 
-#   filter(perenniality == 1)
-# water$startdate[water$startdate < "2019-08-01"] = "2019-08-01"
-# water = water |> 
-#   dplyr::select(startdate) |>
-#   group_by(startdate) %>%
-#   summarise(do_union = FALSE) %>%
-#   st_cast("MULTIPOLYGON")
-# st_write(water, "water.gpkg", delete_dsn = T)
-
-# # distance to breaks ####
+# # process isochrons ####
 # setwd("/glade/scratch/kjfuller/data")
 # # setwd("E:/chapter3/isochrons/Progall_ffdi_v3")
 # g = st_read("progall_ffdi_v3.shp")
@@ -64,61 +25,92 @@ st_write(accesslines, "access_lines.gpkg", delete_dsn = T)
 #   dplyr::select(ID, poly_sD)
 # st_write(g, "isochrons_8days.gpkg", delete_dsn = T)
 
-# further processing ####
-# convert features back to simple geometries, remove Z axis and convert to projected CRS
-setwd("/glade/scratch/kjfuller/data")
-# setwd("E:/chapter3/waterways/")
-water = st_read("water.gpkg")
-water = st_transform(water, crs = targetcrs)
-water = st_zm(water, drop = TRUE, what = "ZM")
-st_write(water, "proj_water.gpkg", delete_dsn = T)
-water = st_cast(water, "POLYGON")
-water = st_transform(water, crs = targetcrs)
-st_write(water, "water_polygons.gpkg", delete_dsn = T)
-# setwd("E:/chapter3/roadways/")
-access = st_read("access_lines.gpkg")
-access = st_zm(access, drop = TRUE, what = "ZM")
-access = st_cast(access, "LINESTRING")
-access = st_transform(access, crs = targetcrs)
-st_write(access, "access_linestrings.gpkg", delete_dsn = T)
-
-# initial distance calculation ####
-# # for each polygon, create a raster of regular cells across the surface, filter features by start date and sample the distance from each raster cell to each feature
-# l = list()
-# for(i in c(1:nrow(g))){
-#   g_temp = g[g$ID == unique(g$ID)[i],]
-#   r_temp = raster(ext = extent(g_temp), res = 10, crs = crs(g))
-#   
-#   water_temp = water |> 
-#     filter(startdate < min(g_temp$poly_sD))
-#   water_temp = as(water_temp, "Spatial")
-#   
-#   access_temp = access |> 
-#     filter(startdate < min(g_temp$poly_sD))
-#   access_temp = as(access_temp, "Spatial")
-#   
-#   waterMin = 
-#         gDistance(access_temp, as(r_temp,"SpatialPoints"), byid=TRUE)
-#   accessMin = 
-#           gDistance(water_temp, as(r_temp,"SpatialPoints"), byid=TRUE)
-#   ## dd is a matrix with ncol == nrow(water_temp) and nrow == ncell(r_temp)
-#   ## columns correspond to polygons or lines, rows correspond to systematically chosen points in the selected polygon
-#   ## calculate distance between water and raster cells
-#   
-#   df = cbind(waterMin, accessMin)
-#   g_temp$breaksMin = 
-#     median(as.numeric(
-#       apply(df, 1, min)))
-#   ## combine distances by cell, calculate the minimum for each row (each cell), calculate the median min distance to a break for each polygon
-#   
-#   st_geometry(g_temp) = NULL
-#   g_temp = g_temp |> 
-#     dplyr::select(ID, breaksMin)
-#   l[[i]] = g_temp
-# }
-# l = bind_rows(l)
-# write.csv(l, "isochron_breaks.csv", row.names = F)
+# # firelines ####
+# setwd("E:/chapter3/isochrons")
+# iso = st_read("isochrons_8days.gpkg")
+# targetcrs = st_crs(iso)
+# iso$poly_sD = as.POSIXct(iso$poly_sD)
+# iso = iso |>
+#   dplyr::select(ID, poly_sD)
+# ## length(unique(iso$ID)) = 106,729
 # 
+# setwd("E:/chapter3/fire lines/")
+# firelines = geojson_sf("ClassifiedFireTrail_EPSG4326_edit.json")
+# firelines$startdate = as.POSIXct(substr(firelines$startdate, 1, 8), format = "%Y%m%d")
+# firelines = firelines |>
+#   filter(startdate < "2020-03-02")
+# firelines$startdate[firelines$startdate < "2019-08-01"] = "2019-08-01"
+# firelines = firelines |>
+#   dplyr::select(startdate)
+# firelines = st_zm(firelines, drop = TRUE, what = "ZM")
+# firelines = st_transform(firelines, crs = targetcrs)
+# st_write(firelines, "firelines.gpkg", delete_dsn = T)
+# 
+# # to start, remove all features which are not within 10km of any fire
+# iso_ext = st_as_sf(as.polygons(ext(iso)))
+# st_crs(iso_ext) = targetcrs
+# iso_ext = st_buffer(iso_ext, dist = 10000)
+# firelines = firelines[iso_ext,]
+# st_write(firelines, "firelines_restricted10km.gpkg", delete_dsn = T)
+# 
+# # roads ####
+# # setwd("E:/chapter3/isochrons")
+# # iso = st_read("isochrons_8days.gpkg")
+# # targetcrs = st_crs(iso)
+# # iso$poly_sD = as.POSIXct(iso$poly_sD)
+# # iso = iso |>
+# #   dplyr::select(ID, poly_sD)
+# # ## length(unique(iso$ID)) = 106,729
+# 
+# setwd("E:/chapter3/roadways/")
+# roads = geojson_sf("RoadSegment_EPSG4326_edit.json")
+# roads$startdate = as.POSIXct(substr(roads$startdate, 1, 8), format = "%Y%m%d")
+# roads = roads |>
+#   filter(startdate < "2020-03-02") |>
+#   filter(roadontype != 3)
+# roads$startdate[roads$startdate < "2019-08-01"] = "2019-08-01"
+# roads = roads |>
+#   dplyr::select(startdate)
+# roads = st_zm(roads, drop = TRUE, what = "ZM")
+# roads = st_transform(roads, crs = targetcrs)
+# st_write(roads, "roads.gpkg", delete_dsn = T)
+# 
+# # to start, remove all features which are not within 10km of any fire
+# # iso_ext = st_as_sf(as.polygons(ext(iso)))
+# # st_crs(iso_ext) = targetcrs
+# # iso_ext = st_buffer(iso_ext, dist = 10000)
+# roads = roads[iso_ext,]
+# st_write(roads, "roads_restricted10km.gpkg", delete_dsn = T)
+# 
+# # water ####
+# # setwd("E:/chapter3/isochrons")
+# # iso = st_read("isochrons_8days.gpkg")
+# # targetcrs = st_crs(iso)
+# # iso$poly_sD = as.POSIXct(iso$poly_sD)
+# # iso = iso |>
+# #   dplyr::select(ID, poly_sD)
+# # ## length(unique(iso$ID)) = 106,729
+# 
+# setwd("E:/chapter3/waterways/")
+# water = geojson_sf("HydroArea_SPHERICAL_MERCATOR_edit.json")
+# water$startdate = as.POSIXct(substr(water$startdate, 1, 8), format = "%Y%m%d")
+# water = water |>
+#   filter(startdate < "2020-03-02") |>
+#   filter(perenniality == 1)
+# water$startdate[water$startdate < "2019-08-01"] = "2019-08-01"
+# water = water |>
+#   dplyr::select(startdate)
+# water = st_zm(water, drop = TRUE, what = "ZM")
+# water = st_transform(water, crs = targetcrs)
+# st_write(water, "water.gpkg", delete_dsn = T)
+# 
+# # to start, remove all features which are not within 10km of any fire
+# # iso_ext = st_as_sf(as.polygons(ext(iso)))
+# # st_crs(iso_ext) = targetcrs
+# # iso_ext = st_buffer(iso_ext, dist = 10000)
+# water = water[iso_ext,]
+# st_write(water, "water_restricted10km.gpkg", delete_dsn = T)
+
 # # housing density ####
 # # setwd("E:/chapter3/isochrons/Progall_ffdi_v3")
 # g = st_read("progall_ffdi_v3.shp")
