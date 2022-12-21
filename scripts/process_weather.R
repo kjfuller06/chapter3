@@ -62,20 +62,21 @@ wind1$DateTime = as.POSIXct(paste0(wind1$date_local, " ", sprintf("%02.0f", wind
 wind1 = wind1 |> 
   dplyr::select(station,
                 DateTime,
-                winddir) |> 
+                winddir,
+                windspeed,
+                windgust) |> 
   filter(!is.na(winddir))
 wind2 = read.csv("wind_data_100km_synoptic_stations.csv")
 wind2$DateTime = as.POSIXct(paste0(wind2$date_local, " ", sprintf("%02.0f", wind2$hour_local), ":", sprintf("%02.0f", wind2$min_std)), format = "%Y-%m-%d %H:%M",  tz = "UTC")
 wind2 = wind2 |>
   dplyr::select(station,
                 DateTime,
-                winddir) |> 
+                winddir,
+                windspeed) |> 
   filter(!is.na(winddir)) |> 
   filter(!station %in% wind1$station)
-
+wind2$windgust = NA
 wind = rbind(wind1, wind2)
-wind$northness = cos(wind$winddir * pi / 180)
-wind$eastness = sin(wind$winddir * pi / 180)
 
 wind = wind |> 
   left_join(bom)
