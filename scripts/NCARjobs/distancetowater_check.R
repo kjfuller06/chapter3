@@ -1,76 +1,145 @@
+# args = commandArgs()
+# num = as.numeric(substr(args[grepl("num", args)], 5, 10))
+
 library(raster)
 library(sf)
 library(tidyverse)
 library(geojsonsf)
 library(rjson)
 library(rgeos)
+library(terra)
 
-# aggregate function
-aggfun <- function(r_temp,ppside){
-  h        <- ceiling(ncol(r_temp)/ppside)
-  v        <- ceiling(nrow(r_temp)/ppside)
-  agg      <- aggregate(r_temp,fact=c(h,v))
-  agg[] = 1:ncell(agg)
-  agg_poly = rasterToPolygons(agg)
-  agg_poly = st_as_sf(agg_poly)
-  
-  l = list()
-  # process and save tiles
-  for(i in c(1:(ppside^2))){
-    # read polygon crops
-    e1 <- extent(agg_poly[i,])
-    # crop raster to tile
-    l[[i]] <- crop(r_temp, e1)
-  }
-  return(l)
-}
-
-
-
-# distance to breaks ####
+# load files ####
 setwd("/glade/scratch/kjfuller/data")
 # setwd("E:/chapter3/isochrons")
-g = st_read("isochrons_8days.gpkg")
-targetcrs = st_crs(g)
-g$poly_sD = as.POSIXct(g$poly_sD)
-g = g |> 
+iso = st_read("isochrons_8days.gpkg")
+targetcrs = st_crs(iso)
+iso$poly_sD = as.POSIXct(iso$poly_sD)
+iso = iso |> 
   dplyr::select(ID, poly_sD)
-## length(unique(g$ID)) = 106,729
+## length(unique(iso$ID)) = 106,729
 
-# convert features back to simple geometries, remove Z axis and convert to projected CRS
-# setwd("E:/chapter3/waterways/")
-water = st_read("water_polygons.gpkg")
+# # setwd("E:/chapter3/waterways/")
+# water = st_read("water_polygons.gpkg")
+# water$startdate = as.Date(water$startdate)
+# 
+# # to start, remove all features which are not within 10km of any fire
+# iso_ext = st_as_sf(as.polygons(ext(iso)))
+# st_crs(iso_ext) = targetcrs
+# iso_ext = st_buffer(iso_ext, dist = 10000)
+# water = water[iso_ext,]
+# st_write(water, "water_polygons_restricted10km.gpkg", delete_dsn = T)
+
+water = st_read("water_polygons_restricted10km.gpkg")
 water$startdate = as.Date(water$startdate)
 
 dates = sort(unique(water$startdate))
-# for(i in c(1:length(dates))){
-  print(paste0("Iteration ", i , ": write raster for dates ", dates[i], " through ", dates[i+1]))
-  g_temp = g |> 
-    filter(poly_sD > dates[i] & poly_sD < dates[i+1])
-  
-  if(nrow(g_temp) > 0){
-    water_temp = water |> 
-      filter(startdate <= dates[i]) |> 
-      as("Spatial")
-    
-    # for each set of polygons, create a raster of regular cells across the surface and sample the distance from each raster cell to each feature
-    r_temp = raster(ext = extent(g_temp), res = 100, crs = crs(g_temp))
-    l = aggfun(r_temp=r_temp, ppside = 10)
-    
-    for(i in c(length(l))){
-      r_r = l[[i]]
-      r_sp = as(r_r,"SpatialPoints")
-      
-      waterMin = 
-        gDistance(water_temp, r_sp, byid=TRUE)
-      ## output is a matrix with ncol == nrow(water_temp) and nrow == ncell(r_temp)
-      ## columns correspond to polygons or lines, rows correspond to systematically chosen points in the selected polygon
-      ## calculate distance between water and raster cells
-      
-      values(r_r) = as.numeric(
-        apply(waterMin, 1, min))
-      writeRaster(r_r, paste0("distancetowater_", dates[i], "_tile", i, ".tif"), overwrite = T)
-    }
-    st_write(g_temp, paste0("distancetowater_polygons_", dates[i], ".gpkg"), delete_dsn = T)
+
+# setwd("E:/chapter3/roadways")
+skip = st_read("water_skipdates.gpkg")
+st_geometry(skip) = NULL
+dates = dates[!dates %in% skip$date]
+print(paste0("length dates = ", length(dates)))
+
+# all other intervals ####
+print(paste0("Iteration ", num , ": write raster tiles for dates ", dates[num], " to ", dates[num + 1]))
+
+# select all fires that occurred *after* all selected features were added (all fires for which the features were relevant)
+# select water features by date (will need to take the min of all relevant rasters, running through each date of "water" and grabbing all previous rasters, as each date represents new, additional water features to include in potential minimum distance)
+iso_temp = iso |> 
+  filter(poly_sD >= dates[num + 1])
+
+# select all features that were added during the selected times- only calculate distances for any new features, to save computation time
+water_temp = water |> 
+  filter(startdate > dates[num] & startdate <= dates[num + 1])
+
+# for each set of features, create a raster of regular cells across the surface of any fires that occurred after the features was created and sample the distance from each raster cell to each feature
+iso_r = raster(ext = extent(iso_temp), res = 100, crs = crs(iso_temp))
+
+if(ncell(iso_r) > 1){
+  # convert raster to sampling points 100m apart
+  iso_sp = as(iso_r,"SpatialPoints")
+} else {
+  iso_sp = as(as(st_centroid(iso_temp), "Spatial"), "SpatialPoints")
+}
+# limit features to only those features which fall within 10km of the extent of the sampling area, to save computation time
+iso_ext = st_as_sf(as.polygons(ext(iso_r)))
+st_crs(iso_ext) = targetcrs
+iso_ext = st_buffer(iso_ext, dist = 10000)
+w_filter = water_temp[iso_ext,]
+
+splitfun = function(x){
+  r = nrow(x)
+  n = r/24
+  rn = floor(n)
+  ID = c(rep(1, rn), 
+         rep(2, rn), 
+         rep(3, rn), 
+         rep(4, rn), 
+         rep(5, rn), 
+         rep(6, rn), 
+         rep(7, rn), 
+         rep(8, rn), 
+         rep(9, rn), 
+         rep(10, rn),
+         rep(11, rn),
+         rep(12, rn),
+         rep(13, rn),
+         rep(14, rn),
+         rep(15, rn),
+         rep(16, rn), 
+         rep(17, rn), 
+         rep(18, rn), 
+         rep(19, rn), 
+         rep(20, rn), 
+         rep(21, rn), 
+         rep(22, rn), 
+         rep(23, rn), 
+         rep(24, rn))
+  if((r - length(ID)) > 0){
+    ID = c(ID, rep(24, (r - length(ID))))
   }
-# }
+  return(ID)
+}
+
+if(nrow(w_filter) > 0){
+  w_filter$index = splitfun(w_filter)
+  
+  distancefun = function(x){
+    w_filter = w_filter |> 
+      filter(index == x)
+    
+    # union all polygons to simplify distance calculation
+    w_filter = st_union(w_filter)
+    # convert to sp
+    w_filter = as(w_filter, "Spatial")
+    
+    ## calculate distance between water features and raster cells
+    waterMin = 
+      gDistance(w_filter, iso_sp, byid=TRUE)
+    ## output is a matrix with ncol == nrow(water_temp) and nrow == ncell(r_temp)
+    ## columns correspond to water lines, rows correspond to systematically chosen points in the selected polygons
+    ## since I union'ed all water features, the distance *is* the minimum distance, no need to calculate a min
+    
+    values(iso_r) = as.numeric(waterMin)
+    writeRaster(iso_r, paste0("distancetowater_", dates[num], "_tile", x, ".tif"), overwrite = T)
+  }
+  
+  sfInit(parallel = TRUE, cpus = 24)
+  sfExport("distancefun", "w_filter", "iso_sp", "iso_r", "dates", "num")
+  sfLibrary(raster)
+  sfLibrary(sf)
+  sfLibrary(tidyverse)
+  sfLibrary(geojsonsf)
+  sfLibrary(rjson)
+  sfLibrary(rgeos)
+  sfLibrary(terra)
+  
+  sfLapply(c(1:24), distancefun)
+  
+  sfStop()
+  
+  st_write(iso_temp, paste0("distancetowater_polygons_after_", dates[x + 1], ".gpkg"), delete_dsn = T)
+} else {
+  print(paste0("no relevant features added for dates ", dates[num], " to ", dates[num + 1]))
+}
