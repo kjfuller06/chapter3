@@ -28,6 +28,7 @@ sf::sf_use_s2(FALSE)
 houses = st_intersection(houses, g)
 st_write(houses, "houses_isochrons.gpkg", delete_dsn = T)
 
+st_geometry(g) = NULL
 st_geometry(houses) = NULL
 houses = houses |>
   filter(startdate < poly_sD)
@@ -41,4 +42,9 @@ house_id = houses |>
   unique()
 houses = full_join(house_agg, house_id)
 houses$house.density = houses$n/houses$area
-write.csv(houses, "housing_density.csv", row.names = F)
+g = g |> 
+  left_join(houses)
+g$house.density[is.na(g$house.density)] = 0
+g$n[is.na(g$n)] = 0
+setwd("E:/chapter3/dwellings/")
+write.csv(g, "housing_density.csv", row.names = F)
