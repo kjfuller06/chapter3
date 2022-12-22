@@ -221,7 +221,6 @@ extractfun = function(x){
   g = left_join(g, g_temp)
   
   # distance to firelines ####
-  setwd("/glade/scratch/kjfuller/data")
   r = raster("distancetofirelines_parallel.tif")
   
   g = st_transform(g, crs = st_crs(r))
@@ -232,7 +231,6 @@ extractfun = function(x){
   g = left_join(g, g_temp)
   
   # distance to roads ####
-  setwd("/glade/scratch/kjfuller/data")
   r = raster("distancetoroads.tif")
   
   g = st_transform(g, crs = st_crs(r))
@@ -243,7 +241,6 @@ extractfun = function(x){
   g = left_join(g, g_temp)
   
   # distance to waterways ####
-  setwd("/glade/scratch/kjfuller/data")
   r = raster("distancetowater_relevance2.tif")
   
   g = st_transform(g, crs = st_crs(r))
@@ -326,6 +323,7 @@ extractfun = function(x){
     # calculate the median wind speed within the polygon timeframe at each selected station, join to station data
     winddir = aggregate(data = wind_temp, winddir ~ station, FUN = median)
     names(winddir)[2] = "winddir"
+    windstats = nrow(winddir)
     windsp = aggregate(data = wind_temp, windspeed ~ station, FUN = median)
     names(windsp)[2] = "windspeed"
     windgt = aggregate(data = wind_temp, windgust ~ station, FUN = median)
@@ -336,7 +334,7 @@ extractfun = function(x){
       inner_join(windsp) |> 
       inner_join(windgt)
     # write number of stations used for calculation
-    wind_temp$windstats = nrow(winddir)
+    wind_temp$windstats = windstats
     # create distance-based weights and calculate distance-weighted mean and wind impact index
     wind_temp$weight = 1 - (wind_temp$dist)/max(wind_temp$dist)
     g_temp$winddir = weighted.mean(wind_temp$winddir, wind_temp$weight)
@@ -345,15 +343,6 @@ extractfun = function(x){
     
     g_temp$winddiff = g_temp$aspect - g_temp$winddir
     g_temp$winddiff = cos(g_temp$winddiff * pi / 180)
-    # select relevant variables for passing to final df
-    g_temp = g_temp |>
-      dplyr::select(shot_number,
-                    winddir,
-                    windspeed,
-                    windgust,
-                    winddiff,
-                    windstats)
-
     l[[i]] = g_temp
   }
   g_temp = bind_rows(l)
