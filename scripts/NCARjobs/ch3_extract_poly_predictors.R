@@ -7,9 +7,8 @@ library(rgeos)
 setwd("/glade/scratch/kjfuller/data")
 # setwd("E:/chapter3/from Michael")
 wind = st_read("wind_direction.gpkg")
+# setwd("E:/chapter3/dwellings")
 houses = read.csv("housing_density.csv")
-types = read.csv("FESM_firetypes.csv") |> 
-  dplyr::select(fire_id, category)
 
 setwd("/glade/scratch/kjfuller/data/LFMC")
 # setwd("E:/chapter3/from Rachael/R project/LFMC/LFMC/GEE_LFMC/LFMC_rasters/GEE_v20May2020_RevisedMask/")
@@ -24,6 +23,7 @@ vpd = data.frame(files = vpd)
 vpd$date = as.Date(substr(vpd$files, 5, 12), format = "%Y%m%d")
 
 setwd("/glade/scratch/kjfuller/data")
+# setwd("D:/chapter1/bark-type-SDM/data")
 fire_reg = read.csv("fire_regimes.csv") |> 
   dplyr::select(fueltype,
                 fire_reg)
@@ -59,8 +59,7 @@ extractfun = function(x){
   
   # merge housing density, distance to breaks, and fire types ####
   g = g |> 
-    left_join(houses) |> 
-    left_join(types)
+    left_join(houses) 
   
   # calculate and merge structural data ####
   g_agg = g |> 
@@ -71,6 +70,7 @@ extractfun = function(x){
   g_agg3 = aggregate(data = g_agg, over_cover ~ ID, FUN = median)
   g_agg4 = aggregate(data = g_agg, fhd_normal ~ ID, FUN = median)
   
+  print("joining all median values of GEDI structure to isochron data")
   g = g |> 
     right_join(g_agg1) |> 
     right_join(g_agg2) |> 
@@ -81,19 +81,26 @@ extractfun = function(x){
   # setwd("D:/chapter1/other_data/Final/terrain variables")
   
   # elevation ####
+  print("reading elevation file")
   r = raster("proj_dem_s.tif")
   
+  print("converting to elevation crs")
   g = st_transform(g, crs = st_crs(r))
+  print("extracting elevation")
   g$elevation = raster::extract(r, g, method = 'simple', fun = sd)
   
+  print("filtering to exclude all NA values")
   g_na = g |> 
     filter(is.na(elevation))
-  elev_na = raster::extract(r, g_na, method = 'simple', exact = T)
-  g_na$elevation = unlist(lapply(elev_na, sd))
-  
-  g = g |> 
-    filter(!is.na(elevation))
-  g = rbind(g, g_na)
+  if(nrow(g_na) > 0){
+    print("some NA's exist: extracting elevation at NA locations again with another method")
+    elev_na = raster::extract(r, g_na, method = 'simple', exact = T)
+    g_na$elevation = unlist(lapply(elev_na, sd))
+    
+    g = g |> 
+      filter(!is.na(elevation))
+    g = rbind(g, g_na)
+  }
   
   # fire regimes ####
   r = raster("fuels_30m.tif")
@@ -324,15 +331,6 @@ extractfun = function(x){
     g_temp$winddiff = g_temp$aspect - g_temp$windmean
     g_temp$winddiff = cos(g_temp$winddiff * pi / 180)
     # select relevant variables for passing to final df
-    g_temp = g_temp |> 
-      dplyr::select(shot_number,
-                    winddir,
-                    wind_var,
-                    windspeed,
-                    windgust,
-                    winddiff,
-                    windstats)
-    
     g_temp = st_transform(g_temp, crs = targetcrs)
     
     l[[i]] = g_temp
