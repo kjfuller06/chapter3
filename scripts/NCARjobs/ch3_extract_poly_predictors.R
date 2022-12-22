@@ -8,7 +8,6 @@ setwd("/glade/scratch/kjfuller/data")
 # setwd("E:/chapter3/from Michael")
 wind = st_read("wind_direction.gpkg")
 houses = read.csv("housing_density.csv")
-breaks = read.csv("isochron_breaks.csv")
 types = read.csv("FESM_firetypes.csv") |> 
   dplyr::select(fire_id, category)
 
@@ -61,7 +60,6 @@ extractfun = function(x){
   # merge housing density, distance to breaks, and fire types ####
   g = g |> 
     left_join(houses) |> 
-    left_join(breaks) |> 
     left_join(types)
   
   # calculate and merge structural data ####
@@ -124,16 +122,28 @@ extractfun = function(x){
   g$firelines = raster::extract(r, g, method = 'simple', fun = median)
   
   # distance to roads ####
-  r = raster("distancetoroads_parallel.tif")
+  r = raster("distancetoroads.tif")
   
   g = st_transform(g, crs = st_crs(r))
   g$roads = raster::extract(r, g, method = 'simple', fun = median)
   
   # distance to water ####
-  r = raster("distancetowater_parallel.tif")
+  r = raster("distancetowater_relevance2.tif")
   
   g = st_transform(g, crs = st_crs(r))
-  g$water = raster::extract(r, g, method = 'simple', fun = median)
+  g$water2 = raster::extract(r, g, method = 'simple', fun = median)
+  
+  r = raster("distancetowater_relevance3.tif")
+  g$water3 = raster::extract(r, g, method = 'simple', fun = median)
+  
+  r = raster("distancetowater_relevance4.tif")
+  g$water4 = raster::extract(r, g, method = 'simple', fun = median)
+  
+  # r = raster("distancetowater_relevance5.tif")
+  # g$water5 = raster::extract(r, g, method = 'simple', fun = median)
+  # 
+  # r = raster("distancetowater_relevance6.tif")
+  # g$water6 = raster::extract(r, g, method = 'simple', fun = median)
   
   # northness ####
   r = raster("proj_dem_northness_30m.tif")
@@ -154,8 +164,6 @@ extractfun = function(x){
   g$stringybark = raster::extract(r, g, method = 'simple', fun = median)
   
   r = raster("NSW_ribboning_distribution.tif")
-  
-  g = st_transform(g, crs = st_crs(r))
   g$ribbonbark = raster::extract(r, g, method = 'simple', fun = median)
   
   setwd("/glade/scratch/kjfuller/data/chapter3")

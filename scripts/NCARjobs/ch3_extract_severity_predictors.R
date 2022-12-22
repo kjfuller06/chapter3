@@ -233,7 +233,7 @@ extractfun = function(x){
   
   # distance to roads ####
   setwd("/glade/scratch/kjfuller/data")
-  r = raster("distancetoroads_parallel.tif")
+  r = raster("distancetoroads.tif")
   
   g = st_transform(g, crs = st_crs(r))
   g_buffer = st_buffer(g, dist = 12.5)
@@ -244,14 +244,38 @@ extractfun = function(x){
   
   # distance to waterways ####
   setwd("/glade/scratch/kjfuller/data")
-  r = raster("distancetowater_parallel.tif")
+  r = raster("distancetowater_relevance2.tif")
   
   g = st_transform(g, crs = st_crs(r))
   g_buffer = st_buffer(g, dist = 12.5)
   
   g_temp = exact_extract(r, g_buffer, fun = "mode", append_cols = TRUE)
-  names(g_temp)[names(g_temp) == "mode"] = "water"
+  names(g_temp)[names(g_temp) == "mode"] = "water2"
   g = left_join(g, g_temp)
+  
+  r = raster("distancetowater_relevance3.tif")
+  
+  g_temp = exact_extract(r, g_buffer, fun = "mode", append_cols = TRUE)
+  names(g_temp)[names(g_temp) == "mode"] = "water3"
+  g = left_join(g, g_temp)
+  
+  r = raster("distancetowater_relevance4.tif")
+  
+  g_temp = exact_extract(r, g_buffer, fun = "mode", append_cols = TRUE)
+  names(g_temp)[names(g_temp) == "mode"] = "water4"
+  g = left_join(g, g_temp)
+  
+  # r = raster("distancetowater_relevance5.tif")
+  # 
+  # g_temp = exact_extract(r, g_buffer, fun = "mode", append_cols = TRUE)
+  # names(g_temp)[names(g_temp) == "mode"] = "water5"
+  # g = left_join(g, g_temp)
+  # 
+  # r = raster("distancetowater_relevance6.tif")
+  # 
+  # g_temp = exact_extract(r, g_buffer, fun = "mode", append_cols = TRUE)
+  # names(g_temp)[names(g_temp) == "mode"] = "water6"
+  # g = left_join(g, g_temp)
 
   # wind direction ####
   g_buffer = st_buffer(g, dist = 100000)
