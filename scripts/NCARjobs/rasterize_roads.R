@@ -25,7 +25,7 @@ rm(iso)
 # roads ####
 setwd("/glade/scratch/kjfuller/data")
 # setwd("E:/chapter3/roadways")
-roads = st_read("roads.gpkg")
+roads = st_read("roads_restricted10km.gpkg")
 
 # convert roads to SpatialLines format and rasterize in parallel
 road_sp = as(as(roads,"Spatial"), "SpatialLines")
@@ -43,7 +43,7 @@ road_pieces <- parLapply(cl = cl, X = 1:n, fun = function(x) rasterize(road_sp[p
 stopCluster(cl)
 # Merge all raster parts
 road_r <- do.call(merge, road_pieces)
-writeRaster(road_r, "roads_parallel.tif", overwrite = T)
+writeRaster(road_r, "roads.tif", overwrite = T)
 
 # convert template raster and roads raster to data frames and grab just the coordinates of the locations of interest (for roads, the non-NA values; for the query raster, all cells)
 road_df = as.data.frame(road_r, xy = TRUE)
@@ -58,4 +58,4 @@ dnear = knnx.dist(data = road_df, query = iso_df, k = 1)
 # assign the values to the NA cells in the first raster
 road_r = iso_r
 values(road_r) = dnear
-writeRaster(road_r, "distancetoroads_parallel.tif", overwrite = T)
+writeRaster(road_r, "distancetoroads.tif", overwrite = T)

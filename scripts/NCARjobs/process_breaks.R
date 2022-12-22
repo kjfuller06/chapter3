@@ -53,15 +53,15 @@ library(FNN)
 # firelines = firelines[iso_ext,]
 # st_write(firelines, "firelines_restricted10km.gpkg", delete_dsn = T)
 # 
-# # roads ####
-# # setwd("E:/chapter3/isochrons")
-# # iso = st_read("isochrons_8days.gpkg")
-# # targetcrs = st_crs(iso)
-# # iso$poly_sD = as.POSIXct(iso$poly_sD)
-# # iso = iso |>
-# #   dplyr::select(ID, poly_sD)
-# # ## length(unique(iso$ID)) = 106,729
-# 
+# roads ####
+# setwd("E:/chapter3/isochrons")
+# iso = st_read("isochrons_8days.gpkg")
+# targetcrs = st_crs(iso)
+# iso$poly_sD = as.POSIXct(iso$poly_sD)
+# iso = iso |>
+#   dplyr::select(ID, poly_sD)
+# ## length(unique(iso$ID)) = 106,729
+
 # setwd("E:/chapter3/roadways/")
 # roads = geojson_sf("RoadSegment_EPSG4326_edit.json")
 # roads$startdate = as.POSIXct(substr(roads$startdate, 1, 8), format = "%Y%m%d")
@@ -81,35 +81,87 @@ library(FNN)
 # # iso_ext = st_buffer(iso_ext, dist = 10000)
 # roads = roads[iso_ext,]
 # st_write(roads, "roads_restricted10km.gpkg", delete_dsn = T)
-# 
-# # water ####
-# # setwd("E:/chapter3/isochrons")
-# # iso = st_read("isochrons_8days.gpkg")
-# # targetcrs = st_crs(iso)
-# # iso$poly_sD = as.POSIXct(iso$poly_sD)
-# # iso = iso |>
-# #   dplyr::select(ID, poly_sD)
-# # ## length(unique(iso$ID)) = 106,729
-# 
+
+setwd("E:/chapter3/roadways/")
+roads = geojson_sf("RoadNameExtent_EPSG4326_edit.json")
+roads$startdate = as.POSIXct(substr(roads$startdate, 1, 8), format = "%Y%m%d")
+roads = roads |>
+  filter(startdate < "2020-03-02") |>
+  filter(functionhierarchy != 9 & functionhierarchy != 8) |> 
+  filter(operationalstatus == 1) |> 
+  filter(relevance == 1)
+## not a walking path, not unimproved road (which includes driveways)
+## operational
+## cut out non-significant roadways
+roads$startdate[roads$startdate < "2019-08-01"] = "2019-08-01"
+roads = st_zm(roads, drop = TRUE, what = "ZM")
+roads = st_transform(roads, crs = targetcrs)
+st_write(roads, "roads.gpkg", delete_dsn = T)
+
+# to start, remove all features which are not within 10km of any fire
+# iso_ext = st_as_sf(as.polygons(ext(iso)))
+# st_crs(iso_ext) = targetcrs
+# iso_ext = st_buffer(iso_ext, dist = 10000)
+roads = roads[iso_ext,]
+st_write(roads, "roads_restricted10km.gpkg", delete_dsn = T)
+
+# water ####
+setwd("E:/chapter3/isochrons")
+iso = st_read("isochrons_8days.gpkg")
+targetcrs = st_crs(iso)
+iso$poly_sD = as.POSIXct(iso$poly_sD)
+iso = iso |>
+  dplyr::select(ID, poly_sD)
+## length(unique(iso$ID)) = 106,729
+
 # setwd("E:/chapter3/waterways/")
-# water = geojson_sf("HydroArea_SPHERICAL_MERCATOR_edit.json")
-# water$startdate = as.POSIXct(substr(water$startdate, 1, 8), format = "%Y%m%d")
-# water = water |>
+# water2 = geojson_sf("HydroArea_SPHERICAL_MERCATOR_edit.json")
+# ## classsubtype 1 == water body
+# ## classsubtype 2 == water course
+# 
+# water2$startdate = as.POSIXct(substr(water2$startdate, 1, 8), format = "%Y%m%d")
+# water2 = water2 |>
 #   filter(startdate < "2020-03-02") |>
 #   filter(perenniality == 1)
-# water$startdate[water$startdate < "2019-08-01"] = "2019-08-01"
-# water = water |>
-#   dplyr::select(startdate)
-# water = st_zm(water, drop = TRUE, what = "ZM")
-# water = st_transform(water, crs = targetcrs)
-# st_write(water, "water.gpkg", delete_dsn = T)
-# 
-# # to start, remove all features which are not within 10km of any fire
-# # iso_ext = st_as_sf(as.polygons(ext(iso)))
-# # st_crs(iso_ext) = targetcrs
-# # iso_ext = st_buffer(iso_ext, dist = 10000)
-# water = water[iso_ext,]
-# st_write(water, "water_restricted10km.gpkg", delete_dsn = T)
+# water2$startdate[water2$startdate < "2019-08-01"] = "2019-08-01"
+# # water = water |>
+# #   dplyr::select(startdate)
+# water2 = st_zm(water2, drop = TRUE, what = "ZM")
+# ## all features represented as polygons or multipolygons- can filter by Shape__Area to get the most major water features
+# water2 = water2 |> 
+#   filter(Shape__Area > 10000)
+# ## no good- still small features showing up and level of detail is still patchy
+
+setwd("E:/chapter3/waterways/")
+water = geojson_sf("NamedWatercourse_EPSG4326_edit.json")
+## relevance is a good control here- the higher the number, the smaller the feature
+
+water$startdate = as.POSIXct(substr(water$startdate, 1, 8), format = "%Y%m%d")
+water = water |>
+  filter(startdate < "2020-03-02")
+water$startdate[water$startdate < "2019-08-01"] = "2019-08-01"
+water = st_zm(water, drop = TRUE, what = "ZM")
+
+par(mfrow = c(3, 3))
+plot(st_geometry(water |> filter(relevance <= 1)), main = "relevance <= 1")
+plot(st_geometry(water |> filter(relevance <= 2)), main = "relevance <= 2")
+plot(st_geometry(water |> filter(relevance <= 3)), main = "relevance <= 3")
+plot(st_geometry(water |> filter(relevance <= 4)), main = "relevance <= 4")
+plot(st_geometry(water |> filter(relevance <= 5)), main = "relevance <= 5")
+plot(st_geometry(water |> filter(relevance <= 6)), main = "relevance <= 6")
+plot(st_geometry(water |> filter(relevance <= 7)), main = "relevance <= 7")
+plot(st_geometry(water |> filter(relevance <= 8)), main = "relevance <= 8")
+plot(st_geometry(water |> filter(relevance <= 9)), main = "relevance <= 9")
+
+water = st_transform(water, crs = targetcrs)
+st_write(water, "water.gpkg", delete_dsn = T)
+
+# to start, remove all features which are not within 10km of any fire
+iso_ext = st_as_sf(as.polygons(ext(iso)))
+st_crs(iso_ext) = targetcrs
+iso_ext = st_buffer(iso_ext, dist = 10000)
+water = water[iso_ext,]
+st_write(water, "water_restricted10km.gpkg", delete_dsn = T)
 
 # # housing density ####
 # # setwd("E:/chapter3/isochrons/Progall_ffdi_v3")
