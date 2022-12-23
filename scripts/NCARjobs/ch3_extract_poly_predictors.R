@@ -8,7 +8,8 @@ setwd("/glade/scratch/kjfuller/data")
 # setwd("E:/chapter3/from Michael")
 wind = st_read("wind_direction.gpkg")
 # setwd("E:/chapter3/dwellings")
-houses = read.csv("housing_density.csv")
+houses = read.csv("housing_density.csv") |> 
+  dplyr::select(ID, house.density)
 
 setwd("/glade/scratch/kjfuller/data/LFMC")
 # setwd("E:/chapter3/from Rachael/R project/LFMC/LFMC/GEE_LFMC/LFMC_rasters/GEE_v20May2020_RevisedMask/")
@@ -45,17 +46,8 @@ extractfun = function(x){
   
   # load isochrons ####
   setwd("/glade/scratch/kjfuller/data")
-  # setwd("E:/chapter3/isochrons/Progall_ffdi_v3")
-  g = st_read("progall_ffdi_v3.shp")
-  g$ID = c(1:nrow(g))
-  g$poly_sD = as.POSIXct(g$lasttim, format = "%Y-%m-%d %H:%M")
-  g$poly_eD = as.POSIXct(g$time, format = "%Y-%m-%d %H:%M")
-  g$progtime = difftime(g$poly_eD, g$poly_sD, units = "hours")
-  g$progtime = as.numeric(g$progtime)
-  g = g |> 
-    filter(progtime > 0) |> 
-    filter(progtime <= 24)
-  g$prog = g$area/g$progtime
+  # setwd("E:/chapter3/isochrons")
+  g = st_read("isochrons_8days.gpkg")
   
   # merge housing density, distance to breaks, and fire types ####
   g = g |> 
@@ -63,7 +55,7 @@ extractfun = function(x){
   
   # calculate and merge structural data ####
   g_agg = g |> 
-    right_join(gedi)
+    inner_join(gedi)
   # calculate the median of continuous variables
   g_agg1 = aggregate(data = g_agg, rh98 ~ ID, FUN = median)
   g_agg2 = aggregate(data = g_agg, cover_z_1 ~ ID, FUN = median)
