@@ -8,6 +8,7 @@ library(UBL)
 # setwd("E:/chapter3/GEDI_FESM")
 setwd("/glade/scratch/kjfuller/data/chapter3")
 thinfun = function(x){
+  # setwd("E:/chapter3/for GAMs")
   g = st_read(paste0("ch3_forGAMs_prefire", x, "_allvars2.gpkg"))
   g = g |>
     filter(!is.na(LFMC) & !is.na(stringybark) & !is.na(ribbonbark)) |>
@@ -17,6 +18,7 @@ thinfun = function(x){
   g$lon = st_coordinates(g)[,1]
   g$lat = st_coordinates(g)[,2]
   st_geometry(g) = NULL
+  g$house.density[is.na(g$house.density)] = 0
 
   l = list()
   for(i in c(1:length(unique(g$fire_reg)))){
@@ -35,6 +37,10 @@ thinfun = function(x){
   g$lon = st_coordinates(g)[,1]
   g$lat = st_coordinates(g)[,2]
   st_geometry(g) = NULL
+  
+  g$winddiff = g$aspect - g$maxwd
+  g$winddiff = cos(g$winddiff * pi / 180)
+  
   g = g %>%
     dplyr::select(severity,
                   fire_reg,
@@ -48,16 +54,25 @@ thinfun = function(x){
                   eastness,
                   # TSF.hist,
                   ffdi_final,
-                  FireTypeCategoryId,
+                  category,
                   LFMC,
                   VPD,
                   stringybark,
                   ribbonbark,
+                  house.density,
+                  aspect,
+                  firelines,
+                  roads,
+                  water2,
+                  water3,
+                  water4,
+                  winddiff,
+                  maxws,
                   lon,
                   lat)
   g$fire_reg = as.factor(g$fire_reg)
   g$severity = as.factor(g$severity)
-  g$FireTypeCategoryId = as.factor(g$FireTypeCategoryId)
+  g$category = as.factor(g$category)
   
   for(i in c(1:length(unique(g$severity)))){
     g1 = g |> 
@@ -80,6 +95,6 @@ thinfun = function(x){
 thinfun(7)
 thinfun(14)
 thinfun(30)
-thinfun(60)
-thinfun(90)
-thinfun(180)
+# thinfun(60)
+# thinfun(90)
+# thinfun(180)
