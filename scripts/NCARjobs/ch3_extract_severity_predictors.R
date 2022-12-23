@@ -4,7 +4,8 @@ library(tidyverse)
 library(exactextractr)
 
 setwd("/glade/scratch/kjfuller/data")
-houses = read.csv("housing_density.csv")
+houses = read.csv("housing_density.csv") |> 
+  dplyr::select(ID, house.density)
 # setwd("E:/chapter3/from Michael")
 wind = st_read("wind_direction.gpkg")
 types = read.csv("FESM_firetypes.csv") |> 
