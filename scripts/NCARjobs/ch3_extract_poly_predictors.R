@@ -31,6 +31,7 @@ fire_reg = read.csv("fire_regimes.csv") |>
 
 setwd("/glade/scratch/kjfuller/data/chapter3")
 extractfun = function(x){
+  tryCatch({
   # load forest structure data ####
   # setwd("E:/chapter3/GEDI_FESM")
   gedi = st_read(paste0("ch3_isochrons_prefire", x, ".gpkg"))
@@ -248,6 +249,9 @@ extractfun = function(x){
   st_geometry(g_temp) = NULL
   g = full_join(g, g_temp)
   
+  st_write(g, paste0("ch3_forGAMs_poly_prefire", x, "_dynamic.gpkg"), delete_dsn = T)
+  # g = st_read(paste0("ch3_forGAMs_poly_prefire", x, "_dynamic.gpkg"))
+  
   # wind direction ####
   g = st_transform(g, crs = targetcrs)
   g_buffer = st_buffer(g, dist = 100000)
@@ -335,6 +339,7 @@ extractfun = function(x){
   st_write(g, paste0("ch3_forGAMs_prefire", x, "_poly_allvars.gpkg"), delete_dsn = T)
   
   print(paste0("*******************  ", x, " done  *********************"))
+  }, error = function(e){print(x); cat("ERROR :", conditionMessage(e), "\n")})
 }
 
 extractfun(7)
@@ -344,5 +349,5 @@ extractfun(60)
 extractfun(90)
 extractfun(180)
 
-## still need to extract: fire type categories (FESM directly)
+## still need to extract: fire type categories (FESM directly) -> not all isochrons align with FESM fires
 ## aspect, wind direction done, fire regime types (in order to restrict less representative veg types), number of dwellings, distance to roads and distance to water (take the min of both) done

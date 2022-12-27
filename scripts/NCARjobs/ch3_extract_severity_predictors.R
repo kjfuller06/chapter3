@@ -274,6 +274,9 @@ extractfun = function(x){
   # g_temp = exact_extract(r, g_buffer, fun = "mode", append_cols = TRUE)
   # names(g_temp)[names(g_temp) == "mode"] = "water6"
   # g = left_join(g, g_temp)
+  
+  st_write(g, paste0("ch3_forGAMs_prefire", x, "_dynamic.gpkg"), delete_dsn = T)
+  # g = st_read(paste0("ch3_forGAMs_prefire, x, "_dynamic.gpkg"))
 
   # wind direction ####
   g_buffer = st_buffer(g, dist = 100000)
@@ -353,9 +356,9 @@ extractfun = function(x){
   st_write(g, paste0("ch3_forGAMs_prefire", x, "_allvars2.gpkg"), delete_dsn = T)
 }
 
-extractfun(7)
-extractfun(14)
-extractfun(30)
-extractfun(60)
-extractfun(90)
+# extractfun(7)
+# extractfun(14)
+# extractfun(30)
+# extractfun(60)
+# extractfun(90)
 extractfun(180)
