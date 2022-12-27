@@ -7,23 +7,24 @@ library(rgeos)
 library(terra)
 library(FNN)
 
-# # process isochrons ####
-# setwd("/glade/scratch/kjfuller/data")
-# # setwd("E:/chapter3/isochrons/Progall_ffdi_v3")
-# g = st_read("progall_ffdi_v3.shp")
-# targetcrs = st_crs(g)
-# g$ID = c(1:nrow(g))
-# g$poly_sD = as.POSIXct(g$lasttim, format = "%Y-%m-%d %H:%M")
-# g$poly_eD = as.POSIXct(g$time, format = "%Y-%m-%d %H:%M")
-# g$progtime = difftime(g$poly_eD, g$poly_sD, units = "hours")
-# g$progtime = as.numeric(g$progtime)
-# # filter polygons
-# g = g |>
-#   filter(progtime > 0) |>
-#   filter(progtime <= 192) ## progression time < 8 days (8 * 24 = 192)
-# g = g |>
-#   dplyr::select(ID, poly_sD)
-# st_write(g, "isochrons_8days.gpkg", delete_dsn = T)
+# process isochrons ####
+setwd("/glade/scratch/kjfuller/data")
+setwd("E:/chapter3/isochrons/Progall_ffdi_v3")
+g = st_read("progall_ffdi_v3.shp")
+targetcrs = st_crs(g)
+g$ID = c(1:nrow(g))
+g$poly_sD = as.POSIXct(g$lasttim, format = "%Y-%m-%d %H:%M")
+g$poly_eD = as.POSIXct(g$time, format = "%Y-%m-%d %H:%M")
+g$progtime = difftime(g$poly_eD, g$poly_sD, units = "hours")
+g$progtime = as.numeric(g$progtime)
+# filter polygons
+g = g |>
+  filter(progtime > 0) |>
+  filter(progtime <= 192) ## progression time < 8 days (8 * 24 = 192)
+g = g |>
+  dplyr::select(ID, poly_sD, poly_eD, progtime)
+setwd("E:/chapter3/isochrons")
+st_write(g, "isochrons_8days.gpkg", delete_dsn = T)
 
 # # firelines ####
 # setwd("E:/chapter3/isochrons")
