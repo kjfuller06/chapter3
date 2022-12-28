@@ -12,15 +12,10 @@ g = st_read("progall_ffdi_v3.shp")
 targetcrs = st_crs(g)
 g$ID = c(1:nrow(g))
 g$poly_sD = as.POSIXct(g$lasttim, format = "%Y-%m-%d %H:%M")
-g$poly_eD = as.POSIXct(g$time, format = "%Y-%m-%d %H:%M")
-g$progtime = difftime(g$poly_eD, g$poly_sD, units = "hours")
-g$progtime = as.numeric(g$progtime)
-g = g |>
-  filter(progtime > 0) |>
-  filter(progtime <= 192) ## progression time < 8 days (8 * 24 = 192)
 g = g |>
   dplyr::select(ID, poly_sD, area)
 
+# setwd("E:/chapter3/dwellings")
 houses = st_read("houses.gpkg")
 houses$startdate = as.POSIXct(houses$startdate, 1, 8)
 sf::sf_use_s2(FALSE)
@@ -46,5 +41,5 @@ g = g |>
   left_join(houses)
 g$house.density[is.na(g$house.density)] = 0
 g$n[is.na(g$n)] = 0
-setwd("E:/chapter3/dwellings/")
+# setwd("E:/chapter3/dwellings/")
 write.csv(g, "housing_density.csv", row.names = F)
