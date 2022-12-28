@@ -28,6 +28,9 @@ types$fire_id = as.factor(types$fire_id)
 # vpd = data.frame(files = vpd)
 # vpd$date = as.Date(substr(vpd$files, 5, 12), format = "%Y%m%d")
 
+setwd("/glade/scratch/kjfuller/data/chapter3")
+g_ref = st_read(paste0("ch3_forGAMs_prefire90_allvars2.gpkg"))
+
 # setwd("E:/chapter3/GEDI_FESM")
 extractfun = function(x){
   # done ##### 
@@ -200,84 +203,91 @@ extractfun = function(x){
   # setwd("/glade/scratch/kjfuller/data/chapter3")
   # st_write(g, paste0("ch3_forGAMs_prefire", x, "_allvars.gpkg"), delete_dsn = T)
   
-  # merge housing density, distance to breaks and fire types ####
-  # setwd("E:/chapter3/for GAMs")
-  setwd("/glade/scratch/kjfuller/data/chapter3")
-  g = st_read(paste0("ch3_forGAMs_prefire", x, "_allvars.gpkg"))
-  targetcrs = st_crs(g)
-  g$fire_id = as.factor(g$fire_id)
+  # # merge housing density, distance to breaks and fire types ####
+  # # setwd("E:/chapter3/for GAMs")
+  # setwd("/glade/scratch/kjfuller/data/chapter3")
+  # g = st_read(paste0("ch3_forGAMs_prefire", x, "_allvars.gpkg"))
+  # targetcrs = st_crs(g)
+  # g$fire_id = as.factor(g$fire_id)
+  # g = g |> 
+  #   left_join(houses) |> 
+  #   left_join(types)
+  # 
+  # # aspect ####
+  # setwd("/glade/scratch/kjfuller/data")
+  # r = raster("proj_dem_aspect_30m.tif")
+  # 
+  # g = st_transform(g, crs = st_crs(r))
+  # g_buffer = st_buffer(g, dist = 12.5)
+  # 
+  # g_temp = exact_extract(r, g_buffer, fun = "mode", append_cols = TRUE)
+  # names(g_temp)[names(g_temp) == "mode"] = "aspect"
+  # g = left_join(g, g_temp)
+  # 
+  # # distance to firelines ####
+  # r = raster("distancetofirelines_parallel.tif")
+  # 
+  # g = st_transform(g, crs = st_crs(r))
+  # g_buffer = st_buffer(g, dist = 12.5)
+  # 
+  # g_temp = exact_extract(r, g_buffer, fun = "mode", append_cols = TRUE)
+  # names(g_temp)[names(g_temp) == "mode"] = "firelines"
+  # g = left_join(g, g_temp)
+  # 
+  # # distance to roads ####
+  # r = raster("distancetoroads.tif")
+  # 
+  # g = st_transform(g, crs = st_crs(r))
+  # g_buffer = st_buffer(g, dist = 12.5)
+  # 
+  # g_temp = exact_extract(r, g_buffer, fun = "mode", append_cols = TRUE)
+  # names(g_temp)[names(g_temp) == "mode"] = "roads"
+  # g = left_join(g, g_temp)
+  # 
+  # # distance to waterways ####
+  # r = raster("distancetowater_relevance2.tif")
+  # 
+  # g = st_transform(g, crs = st_crs(r))
+  # g_buffer = st_buffer(g, dist = 12.5)
+  # 
+  # g_temp = exact_extract(r, g_buffer, fun = "mode", append_cols = TRUE)
+  # names(g_temp)[names(g_temp) == "mode"] = "water2"
+  # g = left_join(g, g_temp)
+  # 
+  # r = raster("distancetowater_relevance3.tif")
+  # 
+  # g_temp = exact_extract(r, g_buffer, fun = "mode", append_cols = TRUE)
+  # names(g_temp)[names(g_temp) == "mode"] = "water3"
+  # g = left_join(g, g_temp)
+  # 
+  # r = raster("distancetowater_relevance4.tif")
+  # 
+  # g_temp = exact_extract(r, g_buffer, fun = "mode", append_cols = TRUE)
+  # names(g_temp)[names(g_temp) == "mode"] = "water4"
+  # g = left_join(g, g_temp)
+  # 
+  # # r = raster("distancetowater_relevance5.tif")
+  # # 
+  # # g_temp = exact_extract(r, g_buffer, fun = "mode", append_cols = TRUE)
+  # # names(g_temp)[names(g_temp) == "mode"] = "water5"
+  # # g = left_join(g, g_temp)
+  # # 
+  # # r = raster("distancetowater_relevance6.tif")
+  # # 
+  # # g_temp = exact_extract(r, g_buffer, fun = "mode", append_cols = TRUE)
+  # # names(g_temp)[names(g_temp) == "mode"] = "water6"
+  # # g = left_join(g, g_temp)
+  # 
+  # setwd("/glade/scratch/kjfuller/data/chapter3")
+  # st_write(g, paste0("ch3_forGAMs_prefire", x, "_dynamic.gpkg"), delete_dsn = T)
+  g = st_read(paste0("ch3_forGAMs_prefire", x, "_dynamic.gpkg"))
+  print(paste0("nrow(g) before filtering == ", nrow(g)))
+  
+  # remove all isochrons that have already been processed, to save time
   g = g |> 
-    left_join(houses) |> 
-    left_join(types)
+    filter(!ID %in% g_ref$ID)
+  print(paste0("nrow(g) after filtering == ", nrow(g)))
   
-  # aspect ####
-  setwd("/glade/scratch/kjfuller/data")
-  r = raster("proj_dem_aspect_30m.tif")
-
-  g = st_transform(g, crs = st_crs(r))
-  g_buffer = st_buffer(g, dist = 12.5)
-
-  g_temp = exact_extract(r, g_buffer, fun = "mode", append_cols = TRUE)
-  names(g_temp)[names(g_temp) == "mode"] = "aspect"
-  g = left_join(g, g_temp)
-  
-  # distance to firelines ####
-  r = raster("distancetofirelines_parallel.tif")
-  
-  g = st_transform(g, crs = st_crs(r))
-  g_buffer = st_buffer(g, dist = 12.5)
-  
-  g_temp = exact_extract(r, g_buffer, fun = "mode", append_cols = TRUE)
-  names(g_temp)[names(g_temp) == "mode"] = "firelines"
-  g = left_join(g, g_temp)
-  
-  # distance to roads ####
-  r = raster("distancetoroads.tif")
-  
-  g = st_transform(g, crs = st_crs(r))
-  g_buffer = st_buffer(g, dist = 12.5)
-  
-  g_temp = exact_extract(r, g_buffer, fun = "mode", append_cols = TRUE)
-  names(g_temp)[names(g_temp) == "mode"] = "roads"
-  g = left_join(g, g_temp)
-  
-  # distance to waterways ####
-  r = raster("distancetowater_relevance2.tif")
-  
-  g = st_transform(g, crs = st_crs(r))
-  g_buffer = st_buffer(g, dist = 12.5)
-  
-  g_temp = exact_extract(r, g_buffer, fun = "mode", append_cols = TRUE)
-  names(g_temp)[names(g_temp) == "mode"] = "water2"
-  g = left_join(g, g_temp)
-  
-  r = raster("distancetowater_relevance3.tif")
-  
-  g_temp = exact_extract(r, g_buffer, fun = "mode", append_cols = TRUE)
-  names(g_temp)[names(g_temp) == "mode"] = "water3"
-  g = left_join(g, g_temp)
-  
-  r = raster("distancetowater_relevance4.tif")
-  
-  g_temp = exact_extract(r, g_buffer, fun = "mode", append_cols = TRUE)
-  names(g_temp)[names(g_temp) == "mode"] = "water4"
-  g = left_join(g, g_temp)
-  
-  # r = raster("distancetowater_relevance5.tif")
-  # 
-  # g_temp = exact_extract(r, g_buffer, fun = "mode", append_cols = TRUE)
-  # names(g_temp)[names(g_temp) == "mode"] = "water5"
-  # g = left_join(g, g_temp)
-  # 
-  # r = raster("distancetowater_relevance6.tif")
-  # 
-  # g_temp = exact_extract(r, g_buffer, fun = "mode", append_cols = TRUE)
-  # names(g_temp)[names(g_temp) == "mode"] = "water6"
-  # g = left_join(g, g_temp)
-  
-  st_write(g, paste0("ch3_forGAMs_prefire", x, "_dynamic.gpkg"), delete_dsn = T)
-  # g = st_read(paste0("ch3_forGAMs_prefire, x, "_dynamic.gpkg"))
-
   # wind direction ####
   g_buffer = st_buffer(g, dist = 100000)
   g_buffer = st_transform(g_buffer, st_crs(wind))
@@ -348,6 +358,7 @@ extractfun = function(x){
     g_temp$winddiff = g_temp$aspect - g_temp$winddir
     g_temp$winddiff = cos(g_temp$winddiff * pi / 180)
     l[[i]] = g_temp
+    print(i)
   }
   g_temp = bind_rows(l)
   g = full_join(g, g_temp)
