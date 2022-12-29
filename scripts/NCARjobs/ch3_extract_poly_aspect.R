@@ -15,10 +15,10 @@ g = g |>
 # slope ####
 setwd("/glade/scratch/kjfuller/data")
 # setwd("D:/chapter1/other_data/Final/terrain variables")
-r = raster("proj_dem_slope_30m.tif")
+r = raster("proj_dem_aspect_30m.tif")
 
 g = st_transform(g, crs = st_crs(r))
-g$slope = raster::extract(r, g, method = 'simple', fun = median, na.rm = T)
+g$aspect = raster::extract(r, g, method = 'simple', fun = median, na.rm = T)
 
 setwd("/glade/scratch/kjfuller/data/chapter3")
 g = st_transform(g, crs = targetcrs)
