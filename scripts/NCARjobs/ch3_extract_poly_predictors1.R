@@ -65,7 +65,7 @@ print("converting to elevation crs")
 g = st_transform(g, crs = st_crs(r))
 print("extracting elevation")
 elevation = raster::extract(r, g, method = 'simple')
-g$elevation = sd(unlist(elevation), na.rm = T)
+g$elevation = unlist(lapply(elevation, sd, na.rm = T))
 
 # fire regimes ####
 # setwd("D:/chapter1/bark-type-SDM/data")
@@ -73,9 +73,15 @@ r = raster("fuels_30m.tif")
 
 g = st_transform(g, crs = st_crs(r))
 fueltype = raster::extract(r, g, method = 'simple')
-fueltype = fueltype[!is.na(fueltype)]
-uniqv <- unique(unlist(fueltype))
-g$fueltype = uniqv[which.max(tabulate(match(unlist(fueltype), uniqv)))]
+
+getmode = function(x){
+  uniqv <- unique(unlist(x))
+  uniqv = uniqv[!is.na(uniqv)]
+  m = uniqv[which.max(tabulate(match(x, uniqv)))]
+  return(m)
+} 
+
+g$fueltype = unlist(lapply(fueltype, getmode))
 g = g |> 
   left_join(fire_reg)
 
