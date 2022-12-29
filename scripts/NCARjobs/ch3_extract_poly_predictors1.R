@@ -4,123 +4,124 @@ library(tidyverse)
 library(exactextractr)
 library(rgeos)
 
-setwd("/glade/scratch/kjfuller/data/chapter3")
-# setwd("E:/chapter3/dwellings")
-houses = read.csv("housing_isochrons_density.csv") |> 
-  dplyr::select(ID, house.density)
+# start ####
+# setwd("/glade/scratch/kjfuller/data/chapter3")
+# # setwd("E:/chapter3/dwellings")
+# houses = read.csv("housing_isochrons_density.csv") |> 
+#   dplyr::select(ID, house.density)
 
-setwd("/glade/scratch/kjfuller/data")
-# setwd("D:/chapter1/bark-type-SDM/data")
-fire_reg = read.csv("fire_regimes.csv") |> 
-  dplyr::select(fueltype,
-                fire_reg)
+# setwd("/glade/scratch/kjfuller/data")
+# # setwd("D:/chapter1/bark-type-SDM/data")
+# fire_reg = read.csv("fire_regimes.csv") |> 
+#   dplyr::select(fueltype,
+#                 fire_reg)
 
-# load forest structure data ####
-setwd("/glade/scratch/kjfuller/data/chapter3")
-# setwd("E:/chapter3/GEDI_FESM/")
-gedi = st_read(paste0("ch3_isochrons_prefire180.gpkg"))
-targetcrs = st_crs(gedi)
-st_geometry(gedi) = NULL
-gedi = gedi |> 
-  dplyr::select(shot_number,
-                ID,
-                rh98,
-                cover_z_1,
-                over_cover,
-                fhd_normal)
-
-# load isochrons ####
-setwd("/glade/scratch/kjfuller/data")
-# setwd("E:/chapter3/isochrons")
-g = st_read("isochrons_8days.gpkg")
-
-# merge housing density, distance to breaks, and fire types ####
-g = g |> 
-  left_join(houses) 
-
-# calculate and merge structural data ####
-g_agg = g |> 
-  inner_join(gedi)
-# calculate the median of continuous variables
-g_agg1 = aggregate(data = g_agg, rh98 ~ ID, FUN = median)
-g_agg2 = aggregate(data = g_agg, cover_z_1 ~ ID, FUN = median)
-g_agg3 = aggregate(data = g_agg, over_cover ~ ID, FUN = median)
-g_agg4 = aggregate(data = g_agg, fhd_normal ~ ID, FUN = median)
-
-print("joining all median values of GEDI structure to isochron data")
-g = g |> 
-  right_join(g_agg1) |> 
-  right_join(g_agg2) |> 
-  right_join(g_agg3) |> 
-  right_join(g_agg4)
+# # load forest structure data ####
+# setwd("/glade/scratch/kjfuller/data/chapter3")
+# # setwd("E:/chapter3/GEDI_FESM/")
+# gedi = st_read(paste0("ch3_isochrons_prefire180.gpkg"))
+# targetcrs = st_crs(gedi)
+# st_geometry(gedi) = NULL
+# gedi = gedi |> 
+#   dplyr::select(shot_number,
+#                 ID,
+#                 rh98,
+#                 cover_z_1,
+#                 over_cover,
+#                 fhd_normal)
+# 
+# # load isochrons ####
+# setwd("/glade/scratch/kjfuller/data")
+# # setwd("E:/chapter3/isochrons")
+# g = st_read("isochrons_8days.gpkg")
+# 
+# # merge housing density, distance to breaks, and fire types ####
+# g = g |> 
+#   left_join(houses) 
+# 
+# # calculate and merge structural data ####
+# g_agg = g |> 
+#   inner_join(gedi)
+# # calculate the median of continuous variables
+# g_agg1 = aggregate(data = g_agg, rh98 ~ ID, FUN = median)
+# g_agg2 = aggregate(data = g_agg, cover_z_1 ~ ID, FUN = median)
+# g_agg3 = aggregate(data = g_agg, over_cover ~ ID, FUN = median)
+# g_agg4 = aggregate(data = g_agg, fhd_normal ~ ID, FUN = median)
+# 
+# print("joining all median values of GEDI structure to isochron data")
+# g = g |> 
+#   right_join(g_agg1) |> 
+#   right_join(g_agg2) |> 
+#   right_join(g_agg3) |> 
+#   right_join(g_agg4)
 
 # load rasters
 # setwd("D:/chapter1/other_data/Final/terrain variables")
 
-# elevation ####
-print("reading elevation file")
-r = raster("proj_dem_s.tif")
+# # elevation ####
+# print("reading elevation file")
+# r = raster("proj_dem_s.tif")
+# 
+# print("converting to elevation crs")
+# g = st_transform(g, crs = st_crs(r))
+# print("extracting elevation")
+# elevation = raster::extract(r, g, method = 'simple')
+# g$elevation = unlist(lapply(elevation, sd, na.rm = T))
 
-print("converting to elevation crs")
-g = st_transform(g, crs = st_crs(r))
-print("extracting elevation")
-elevation = raster::extract(r, g, method = 'simple')
-g$elevation = unlist(lapply(elevation, sd, na.rm = T))
-
-# fire regimes ####
-# setwd("D:/chapter1/bark-type-SDM/data")
-r = raster("fuels_30m.tif")
-
-g = st_transform(g, crs = st_crs(r))
-fueltype = raster::extract(r, g, method = 'simple')
-
-getmode = function(x){
-  uniqv <- unique(unlist(x))
-  uniqv = uniqv[!is.na(uniqv)]
-  m = uniqv[which.max(tabulate(match(x, uniqv)))]
-  return(m)
-} 
-
-g$fueltype = unlist(lapply(fueltype, getmode))
-g = g |> 
-  left_join(fire_reg)
+# # fire regimes ####
+# # setwd("D:/chapter1/bark-type-SDM/data")
+# r = raster("fuels_30m.tif")
+# 
+# g = st_transform(g, crs = st_crs(r))
+# fueltype = raster::extract(r, g, method = 'simple')
+# 
+# getmode = function(x){
+#   uniqv <- unique(unlist(x))
+#   uniqv = uniqv[!is.na(uniqv)]
+#   m = uniqv[which.max(tabulate(match(x, uniqv)))]
+#   return(m)
+# } 
+# 
+# g$fueltype = unlist(lapply(fueltype, getmode))
+# g = g |> 
+#   left_join(fire_reg)
 
 # setwd("D:/chapter1/other_data/Final/terrain variables")
-# slope ####
-r = raster("proj_dem_slope_30m.tif")
-
-g = st_transform(g, crs = st_crs(r))
-g$slope = raster::extract(r, g, method = 'simple', fun = median, na.rm = T)
-
-# aspect ####
-r = raster("proj_dem_aspect_30m.tif")
-
-g = st_transform(g, crs = st_crs(r))
-g$aspect = raster::extract(r, g, method = 'simple', fun = median, na.rm = T)
-
-# distance to firelines ####
-r = raster("distancetofirelines_parallel.tif")
-
-g = st_transform(g, crs = st_crs(r))
-g$firelines = raster::extract(r, g, method = 'simple', fun = median, na.rm = T)
-
-# distance to roads ####
-r = raster("distancetoroads.tif")
-
-g = st_transform(g, crs = st_crs(r))
-g$roads = raster::extract(r, g, method = 'simple', fun = median, na.rm = T)
-
-# distance to water ####
-r = raster("distancetowater_relevance2.tif")
-
-g = st_transform(g, crs = st_crs(r))
-g$water2 = raster::extract(r, g, method = 'simple', fun = median, na.rm = T)
-
-r = raster("distancetowater_relevance3.tif")
-g$water3 = raster::extract(r, g, method = 'simple', fun = median, na.rm = T)
-
-r = raster("distancetowater_relevance4.tif")
-g$water4 = raster::extract(r, g, method = 'simple', fun = median, na.rm = T)
+# # slope ####
+# r = raster("proj_dem_slope_30m.tif")
+# 
+# g = st_transform(g, crs = st_crs(r))
+# g$slope = raster::extract(r, g, method = 'simple', fun = median, na.rm = T)
+# 
+# # aspect ####
+# r = raster("proj_dem_aspect_30m.tif")
+# 
+# g = st_transform(g, crs = st_crs(r))
+# g$aspect = raster::extract(r, g, method = 'simple', fun = median, na.rm = T)
+# 
+# # distance to firelines ####
+# r = raster("distancetofirelines_parallel.tif")
+# 
+# g = st_transform(g, crs = st_crs(r))
+# g$firelines = raster::extract(r, g, method = 'simple', fun = median, na.rm = T)
+# 
+# # distance to roads ####
+# r = raster("distancetoroads.tif")
+# 
+# g = st_transform(g, crs = st_crs(r))
+# g$roads = raster::extract(r, g, method = 'simple', fun = median, na.rm = T)
+# 
+# # distance to water ####
+# r = raster("distancetowater_relevance2.tif")
+# 
+# g = st_transform(g, crs = st_crs(r))
+# g$water2 = raster::extract(r, g, method = 'simple', fun = median, na.rm = T)
+# 
+# r = raster("distancetowater_relevance3.tif")
+# g$water3 = raster::extract(r, g, method = 'simple', fun = median, na.rm = T)
+# 
+# r = raster("distancetowater_relevance4.tif")
+# g$water4 = raster::extract(r, g, method = 'simple', fun = median, na.rm = T)
 
 # r = raster("distancetowater_relevance5.tif")
 # g$water5 = raster::extract(r, g, method = 'simple', fun = median, na.rm = T)
@@ -139,13 +140,13 @@ g$water4 = raster::extract(r, g, method = 'simple', fun = median, na.rm = T)
 # g$eastness = raster::extract(r, g, method = 'simple', fun = median, na.rm = T)
 
 # bark types ####
-r = raster("NSW_stringybark_distribution.tif")
+# r = raster("NSW_stringybark_distribution.tif")
+# 
+# g = st_transform(g, crs = st_crs(r))
+# g$stringybark = raster::extract(r, g, method = 'simple', fun = median, na.rm = T)
 
-g = st_transform(g, crs = st_crs(r))
-g$stringybark = raster::extract(r, g, method = 'simple', fun = median, na.rm = T)
-
-r = raster("NSW_ribboning_distribution.tif")
-g$ribbonbark = raster::extract(r, g, method = 'simple', fun = median, na.rm = T)
+# r = raster("NSW_ribboning_distribution.tif")
+# g$ribbonbark = raster::extract(r, g, method = 'simple', fun = median, na.rm = T)
 
 setwd("/glade/scratch/kjfuller/data/chapter3")
 g = st_transform(g, crs = targetcrs)
