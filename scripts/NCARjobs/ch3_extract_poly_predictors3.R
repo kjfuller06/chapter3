@@ -12,14 +12,17 @@ wind = wind |>
   filter(windspeed != 0)
 
 # load isochrons ####
-setwd("/glade/scratch/kjfuller/data")
-# setwd("E:/chapter3/isochrons")
-g = st_read("isochrons_8days.gpkg")
+setwd("/glade/scratch/kjfuller/data/chapter3")
+# setwd("E:/chapter3/for GAMs")
+g = st_read("ch3_forGAMs_poly_prefire180_structure.gpkg")
 targetcrs = st_crs(g)
+g = g |> 
+  dplyr::select(ID,
+                poly_sD,
+                poly_eD)
 g_buffer = st_buffer(g, dist = 100000)
 g_buffer = st_transform(g_buffer, st_crs(wind))
 
-setwd("/glade/scratch/kjfuller/data/chapter3")
 stations = wind |> 
   dplyr::select(station)
 stations = stations[!duplicated(stations$station),]
@@ -105,7 +108,7 @@ g = left_join(g, g_temp)
 
 # write to disk ####
 setwd("/glade/scratch/kjfuller/data/chapter3")
-st_write(g, paste0("ch3_forGAMs_poly_wind.gpkg"), delete_dsn = T)
+st_write(g, paste0("ch3_forGAMs_poly_prefire180_wind.gpkg"), delete_dsn = T)
 
 ## still need to extract: fire type categories (FESM directly) -> not all isochrons align with FESM fires
 ## aspect, wind direction done, fire regime types (in order to restrict less representative veg types), number of dwellings, distance to roads and distance to water (take the min of both) done

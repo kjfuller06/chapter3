@@ -18,10 +18,14 @@ vpd = data.frame(files = vpd)
 vpd$date = as.POSIXct(substr(vpd$files, 5, 12), format = "%Y%m%d")
 
 # load isochrons ####
-setwd("/glade/scratch/kjfuller/data")
-# setwd("E:/chapter3/isochrons")
-g = st_read("isochrons_8days.gpkg")
+setwd("/glade/scratch/kjfuller/data/chapter3")
+# setwd("E:/chapter3/for GAMs")
+g = st_read("ch3_forGAMs_poly_prefire180_structure.gpkg")
 targetcrs = st_crs(g)
+g = g |> 
+  dplyr::select(ID,
+                poly_sD,
+                poly_eD)
 
 # LFMC ####
 setwd("/glade/scratch/kjfuller/data/LFMC")
@@ -111,8 +115,10 @@ g_temp = bind_rows(l)
 g = left_join(g, g_temp) |> 
   st_transform(crs = targetcrs)
 
-st_write(g, "ch3_forGAMs_poly_LFMC.gpkg", delete_dsn = T)
-# g = st_read("ch3_forGAMs_poly_LFMC.gpkg")
+setwd("/glade/scratch/kjfuller/data/chapter3")
+# setwd("E:/chapter3/for GAMs")
+st_write(g, "ch3_forGAMs_poly_prefire180_LFMC.gpkg", delete_dsn = T)
+# g = st_read("ch3_forGAMs_poly_prefire180_LFMC.gpkg")
 
 # VPD ####
 setwd("/glade/scratch/kjfuller/data/VPD")
@@ -178,7 +184,9 @@ st_geometry(g_temp) = NULL
 g = left_join(g, g_temp) |> 
   st_transform(crs = targetcrs)
 
-st_write(g, "ch3_forGAMs_poly_dynamic.gpkg", delete_dsn = T)
+setwd("/glade/scratch/kjfuller/data/chapter3")
+# setwd("E:/chapter3/for GAMs")
+st_write(g, "ch3_forGAMs_poly_prefire180_dynamic.gpkg", delete_dsn = T)
 
 ## still need to extract: fire type categories (FESM directly) -> not all isochrons align with FESM fires
 ## aspect, wind direction done, fire regime types (in order to restrict less representative veg types), number of dwellings, distance to roads and distance to water (take the min of both) done
