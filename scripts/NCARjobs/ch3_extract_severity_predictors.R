@@ -363,191 +363,191 @@ library(exactextractr)
 # extractfun(90)
 # extractfun(180)
 
-# extract just 180 ####
-setwd("/glade/scratch/kjfuller/data")
-# # setwd("E:/chapter3/from Michael")
-wind = st_read("wind_direction.gpkg")
-# types = read.csv("FESM_firetypes.csv") |>
-#   dplyr::select(fire_id, category)
-# types$fire_id = as.factor(types$fire_id)
-# 
-# # merge housing density, distance to breaks and fire types
-# # setwd("E:/chapter3/for GAMs")
-# setwd("/glade/scratch/kjfuller/data/chapter3")
-# g = st_read(paste0("ch3_forGAMs_prefire180_allvars.gpkg"))
-# targetcrs = st_crs(g)
-# g$fire_id = as.factor(g$fire_id)
-# g = g |>
-#   left_join(types)
-# 
-# # aspect
+# # extract just 180 ####
 # setwd("/glade/scratch/kjfuller/data")
-# r = raster("proj_dem_aspect_30m.tif")
-# 
-# g = st_transform(g, crs = st_crs(r))
-# g_buffer = st_buffer(g, dist = 12.5)
-# 
-# g_temp = exact_extract(r, g_buffer, fun = "mode", append_cols = TRUE)
-# names(g_temp)[names(g_temp) == "mode"] = "aspect"
-# g = left_join(g, g_temp)
-# 
-# # distance to firelines
-# r = raster("distancetofirelines_parallel.tif")
-# 
-# g = st_transform(g, crs = st_crs(r))
-# g_buffer = st_buffer(g, dist = 12.5)
-# 
-# g_temp = exact_extract(r, g_buffer, fun = "mode", append_cols = TRUE)
-# names(g_temp)[names(g_temp) == "mode"] = "firelines"
-# g = left_join(g, g_temp)
-# 
-# # distance to roads
-# r = raster("distancetoroads.tif")
-# 
-# g = st_transform(g, crs = st_crs(r))
-# g_buffer = st_buffer(g, dist = 12.5)
-# 
-# g_temp = exact_extract(r, g_buffer, fun = "mode", append_cols = TRUE)
-# names(g_temp)[names(g_temp) == "mode"] = "roads"
-# g = left_join(g, g_temp)
-# 
-# # distance to waterways
-# r = raster("distancetowater_relevance2.tif")
-# 
-# g = st_transform(g, crs = st_crs(r))
-# g_buffer = st_buffer(g, dist = 12.5)
-# 
-# g_temp = exact_extract(r, g_buffer, fun = "mode", append_cols = TRUE)
-# names(g_temp)[names(g_temp) == "mode"] = "water2"
-# g = left_join(g, g_temp)
-# 
-# r = raster("distancetowater_relevance3.tif")
-# 
-# g_temp = exact_extract(r, g_buffer, fun = "mode", append_cols = TRUE)
-# names(g_temp)[names(g_temp) == "mode"] = "water3"
-# g = left_join(g, g_temp)
-# 
-# r = raster("distancetowater_relevance4.tif")
-# 
-# g_temp = exact_extract(r, g_buffer, fun = "mode", append_cols = TRUE)
-# names(g_temp)[names(g_temp) == "mode"] = "water4"
-# g = left_join(g, g_temp)
+# # # setwd("E:/chapter3/from Michael")
+# wind = st_read("wind_direction.gpkg")
+# # types = read.csv("FESM_firetypes.csv") |>
+# #   dplyr::select(fire_id, category)
+# # types$fire_id = as.factor(types$fire_id)
+# # 
+# # # merge housing density, distance to breaks and fire types
+# # # setwd("E:/chapter3/for GAMs")
+# # setwd("/glade/scratch/kjfuller/data/chapter3")
+# # g = st_read(paste0("ch3_forGAMs_prefire180_allvars.gpkg"))
+# # targetcrs = st_crs(g)
+# # g$fire_id = as.factor(g$fire_id)
+# # g = g |>
+# #   left_join(types)
+# # 
+# # # aspect
+# # setwd("/glade/scratch/kjfuller/data")
+# # r = raster("proj_dem_aspect_30m.tif")
+# # 
+# # g = st_transform(g, crs = st_crs(r))
+# # g_buffer = st_buffer(g, dist = 12.5)
+# # 
+# # g_temp = exact_extract(r, g_buffer, fun = "mode", append_cols = TRUE)
+# # names(g_temp)[names(g_temp) == "mode"] = "aspect"
+# # g = left_join(g, g_temp)
+# # 
+# # # distance to firelines
+# # r = raster("distancetofirelines_parallel.tif")
+# # 
+# # g = st_transform(g, crs = st_crs(r))
+# # g_buffer = st_buffer(g, dist = 12.5)
+# # 
+# # g_temp = exact_extract(r, g_buffer, fun = "mode", append_cols = TRUE)
+# # names(g_temp)[names(g_temp) == "mode"] = "firelines"
+# # g = left_join(g, g_temp)
+# # 
+# # # distance to roads
+# # r = raster("distancetoroads.tif")
+# # 
+# # g = st_transform(g, crs = st_crs(r))
+# # g_buffer = st_buffer(g, dist = 12.5)
+# # 
+# # g_temp = exact_extract(r, g_buffer, fun = "mode", append_cols = TRUE)
+# # names(g_temp)[names(g_temp) == "mode"] = "roads"
+# # g = left_join(g, g_temp)
+# # 
+# # # distance to waterways
+# # r = raster("distancetowater_relevance2.tif")
+# # 
+# # g = st_transform(g, crs = st_crs(r))
+# # g_buffer = st_buffer(g, dist = 12.5)
+# # 
+# # g_temp = exact_extract(r, g_buffer, fun = "mode", append_cols = TRUE)
+# # names(g_temp)[names(g_temp) == "mode"] = "water2"
+# # g = left_join(g, g_temp)
+# # 
+# # r = raster("distancetowater_relevance3.tif")
+# # 
+# # g_temp = exact_extract(r, g_buffer, fun = "mode", append_cols = TRUE)
+# # names(g_temp)[names(g_temp) == "mode"] = "water3"
+# # g = left_join(g, g_temp)
+# # 
+# # r = raster("distancetowater_relevance4.tif")
+# # 
+# # g_temp = exact_extract(r, g_buffer, fun = "mode", append_cols = TRUE)
+# # names(g_temp)[names(g_temp) == "mode"] = "water4"
+# # g = left_join(g, g_temp)
+# # 
+# # setwd("/glade/scratch/kjfuller/data/chapter3")
+# # st_write(g, paste0("ch3_forGAMs_prefire180_dynamic.gpkg"), delete_dsn = T)
 # 
 # setwd("/glade/scratch/kjfuller/data/chapter3")
-# st_write(g, paste0("ch3_forGAMs_prefire180_dynamic.gpkg"), delete_dsn = T)
-
-setwd("/glade/scratch/kjfuller/data/chapter3")
-# setwd("E:/chapter3/for GAMS")
-g_ref = st_read(paste0("ch3_forGAMs_prefire90_allvars2.gpkg"))
-targetcrs = st_crs(g_ref)
-
-g = st_read(paste0("ch3_forGAMs_prefire180_dynamic.gpkg"))
-g$poly_sD = as.POSIXct(g$lasttim, format = "%Y-%m-%d %H:%M")
-g$poly_eD = as.POSIXct(g$time, format = "%Y-%m-%d %H:%M")
-print(paste0("nrow(g) before filtering == ", nrow(g)))
-
-# remove all shots that have already been processed, to save time
-g = g |>
-  filter(!shot_number %in% g_ref$shot_number)
-print(paste0("nrow(g) after filtering == ", nrow(g)))
-
-g_buffer = st_buffer(g, dist = 100000)
-g_buffer = st_transform(g_buffer, st_crs(wind))
-g = st_transform(g, st_crs(wind))
-
-# remove all directions when windspeed == 0; select just the stations for calculating distances
-wind = wind |>
-  filter(windspeed != 0)
-
-stations = wind |>
-  dplyr::select(station)
-stations = stations[!duplicated(stations$station),]
-st_geometry(wind) = NULL
-
-counter <- 0
-l <- list(NULL)
-size <- 1
-windfun = function(x){
-  tryCatch({
-    if( .GlobalEnv$counter == .GlobalEnv$size )
-    {length(.GlobalEnv$l) <- .GlobalEnv$size <- .GlobalEnv$size * 2}
-    
-    # select a buffered shot and index all stations within 100km
-    g_temp = g_buffer[x,]
-    stat_temp = stations[g_temp,]
-    
-    # select the original shot and calculate distance to selected stations
-    g_temp = g |>
-      filter(shot_number %in% g_temp$shot_number)
-    stat_temp$dist = as.numeric(st_distance(g_temp, stat_temp))
-    st_geometry(stat_temp) = NULL
-    st_geometry(g_temp) = NULL
-    
-    # if the polygon is the first, overwrite poly_sD as 24hrs before poly_eD (in minutes)
-    if(min(g_temp$poly_sD) == max(g_temp$poly_eD)){
-      g_temp$poly_sD = g_temp$poly_eD - 86400
-    }
-    
-    # select wind data based on polygon timeframe
-    wind_temp = wind |>
-      filter(station %in% stat_temp$station) |>
-      left_join(stat_temp)
-    minT = wind_temp |>
-      filter(DateTime <= min(g_temp$poly_sD))
-    minT = max(minT$DateTime, na.rm = T)
-    maxT = wind_temp |>
-      filter(DateTime >= max(g_temp$poly_eD))
-    maxT = min(maxT$DateTime, na.rm = T)
-    wind_temp = wind_temp |>
-      filter(DateTime >= minT) |>
-      filter(DateTime <= maxT)
-    
-    # calculate the median wind speed within the polygon timeframe at each selected station, join to station data
-    winddir = aggregate(data = wind_temp, winddir ~ station, FUN = median)
-    names(winddir)[2] = "winddir"
-    windstats = nrow(winddir)
-    windsp = aggregate(data = wind_temp, windspeed ~ station, FUN = median)
-    names(windsp)[2] = "windspeed"
-    if(any(!is.na(wind_temp$windgust))){
-      windgt = aggregate(data = wind_temp, windgust ~ station, FUN = median)
-      names(windgt)[2] = "windgust"
-    } else {
-      windgt = windsp
-      names(windgt)[2] = "windgust"
-      windgt$windgust = NA
-    }
-    
-    wind_temp = stat_temp |>
-      inner_join(winddir) |>
-      inner_join(windsp) |>
-      inner_join(windgt)
-    # write number of stations used for calculation
-    wind_temp$windstats = windstats
-    # create distance-based weights and calculate distance-weighted mean and wind impact index
-    wind_temp$weight = 1 - (wind_temp$dist)/max(wind_temp$dist)
-    g_temp$winddir = weighted.mean(wind_temp$winddir, wind_temp$weight)
-    g_temp$windspeed = weighted.mean(wind_temp$windspeed, wind_temp$weight)
-    g_temp$windgust = weighted.mean(wind_temp$windgust, wind_temp$weight)
-    
-    g_temp$winddiff = g_temp$aspect - g_temp$winddir
-    g_temp$winddiff = cos(g_temp$winddiff * pi / 180)
-    # l[[x]] = g_temp
-    
-    .GlobalEnv$counter <- .GlobalEnv$counter + 1
-    .GlobalEnv$l[[.GlobalEnv$counter]] <- g_temp
-  }, error = function(e){print(x); cat("ERROR :", conditionMessage(e), "\n")})
-}
-for(i in c(1:nrow(g))){
-  windfun(i)
-  print(i)
-}
-g_temp = bind_rows(l)
-g = left_join(g, g_temp)
-g = st_transform(g, crs = targetcrs)
-
-setwd("/glade/scratch/kjfuller/data/chapter3")
-st_write(g, paste0("ch3_forGAMs_prefire180_allvars2.gpkg"), delete_dsn = T)
-
+# # setwd("E:/chapter3/for GAMS")
+# g_ref = st_read(paste0("ch3_forGAMs_prefire90_allvars2.gpkg"))
+# targetcrs = st_crs(g_ref)
+# 
+# g = st_read(paste0("ch3_forGAMs_prefire180_dynamic.gpkg"))
+# g$poly_sD = as.POSIXct(g$lasttim, format = "%Y-%m-%d %H:%M")
+# g$poly_eD = as.POSIXct(g$time, format = "%Y-%m-%d %H:%M")
+# print(paste0("nrow(g) before filtering == ", nrow(g)))
+# 
+# # remove all shots that have already been processed, to save time
+# g = g |>
+#   filter(!shot_number %in% g_ref$shot_number)
+# print(paste0("nrow(g) after filtering == ", nrow(g)))
+# 
+# g_buffer = st_buffer(g, dist = 100000)
+# g_buffer = st_transform(g_buffer, st_crs(wind))
+# g = st_transform(g, st_crs(wind))
+# 
+# # remove all directions when windspeed == 0; select just the stations for calculating distances
+# wind = wind |>
+#   filter(windspeed != 0)
+# 
+# stations = wind |>
+#   dplyr::select(station)
+# stations = stations[!duplicated(stations$station),]
+# st_geometry(wind) = NULL
+# 
+# counter <- 0
+# l <- list(NULL)
+# size <- 1
+# windfun = function(x){
+#   tryCatch({
+#     if( .GlobalEnv$counter == .GlobalEnv$size )
+#     {length(.GlobalEnv$l) <- .GlobalEnv$size <- .GlobalEnv$size * 2}
+#     
+#     # select a buffered shot and index all stations within 100km
+#     g_temp = g_buffer[x,]
+#     stat_temp = stations[g_temp,]
+#     
+#     # select the original shot and calculate distance to selected stations
+#     g_temp = g |>
+#       filter(shot_number %in% g_temp$shot_number)
+#     stat_temp$dist = as.numeric(st_distance(g_temp, stat_temp))
+#     st_geometry(stat_temp) = NULL
+#     st_geometry(g_temp) = NULL
+#     
+#     # if the polygon is the first, overwrite poly_sD as 24hrs before poly_eD (in minutes)
+#     if(min(g_temp$poly_sD) == max(g_temp$poly_eD)){
+#       g_temp$poly_sD = g_temp$poly_eD - 86400
+#     }
+#     
+#     # select wind data based on polygon timeframe
+#     wind_temp = wind |>
+#       filter(station %in% stat_temp$station) |>
+#       left_join(stat_temp)
+#     minT = wind_temp |>
+#       filter(DateTime <= min(g_temp$poly_sD))
+#     minT = max(minT$DateTime, na.rm = T)
+#     maxT = wind_temp |>
+#       filter(DateTime >= max(g_temp$poly_eD))
+#     maxT = min(maxT$DateTime, na.rm = T)
+#     wind_temp = wind_temp |>
+#       filter(DateTime >= minT) |>
+#       filter(DateTime <= maxT)
+#     
+#     # calculate the median wind speed within the polygon timeframe at each selected station, join to station data
+#     winddir = aggregate(data = wind_temp, winddir ~ station, FUN = median)
+#     names(winddir)[2] = "winddir"
+#     windstats = nrow(winddir)
+#     windsp = aggregate(data = wind_temp, windspeed ~ station, FUN = median)
+#     names(windsp)[2] = "windspeed"
+#     if(any(!is.na(wind_temp$windgust))){
+#       windgt = aggregate(data = wind_temp, windgust ~ station, FUN = median)
+#       names(windgt)[2] = "windgust"
+#     } else {
+#       windgt = windsp
+#       names(windgt)[2] = "windgust"
+#       windgt$windgust = NA
+#     }
+#     
+#     wind_temp = stat_temp |>
+#       inner_join(winddir) |>
+#       inner_join(windsp) |>
+#       inner_join(windgt)
+#     # write number of stations used for calculation
+#     wind_temp$windstats = windstats
+#     # create distance-based weights and calculate distance-weighted mean and wind impact index
+#     wind_temp$weight = 1 - (wind_temp$dist)/max(wind_temp$dist)
+#     g_temp$winddir = weighted.mean(wind_temp$winddir, wind_temp$weight)
+#     g_temp$windspeed = weighted.mean(wind_temp$windspeed, wind_temp$weight)
+#     g_temp$windgust = weighted.mean(wind_temp$windgust, wind_temp$weight)
+#     
+#     g_temp$winddiff = g_temp$aspect - g_temp$winddir
+#     g_temp$winddiff = cos(g_temp$winddiff * pi / 180)
+#     # l[[x]] = g_temp
+#     
+#     .GlobalEnv$counter <- .GlobalEnv$counter + 1
+#     .GlobalEnv$l[[.GlobalEnv$counter]] <- g_temp
+#   }, error = function(e){print(x); cat("ERROR :", conditionMessage(e), "\n")})
+# }
+# for(i in c(1:nrow(g))){
+#   windfun(i)
+#   print(i)
+# }
+# g_temp = bind_rows(l)
+# g = left_join(g, g_temp)
+# g = st_transform(g, crs = targetcrs)
+# 
+# setwd("/glade/scratch/kjfuller/data/chapter3")
+# st_write(g, paste0("ch3_forGAMs_prefire180_allvars2.gpkg"), delete_dsn = T)
+# 
 # clean up outputs ####
 setwd("E:/chapter3/dwellings")
 housing = st_read("housing_severity_density.gpkg")
@@ -561,143 +561,321 @@ targetcrs = st_crs(gref)
 g1 = st_read("ch3_forGAMs_prefire7_static.gpkg")
 g2 = st_read("ch3_forGAMs_prefire7_allvars.gpkg")
 g3 = st_read("ch3_forGAMs_prefire7_allvars2.gpkg")
+lookup = nrow(g3)
 st_geometry(g3) = NULL
 wind = g3 |>
   dplyr::select(shot_number,
                 winddir:winddiff) |>
   filter(!is.na(winddir))
+nrow(wind) == lookup/2
+## TRUE
 others = g3 |>
   dplyr::select(shot_number,
                 category:water4) |>
   filter(!is.na(water2))
-
+nrow(others) == lookup/2
+## TRUE
 g2 = left_join(g2, wind) |>
   left_join(others) |>
-  left_join(housing)
-
+  left_join(housing) |> 
+  dplyr::select(shot_number,
+                veg,
+                fire_reg,
+                rh98:over_cover,
+                slope,
+                severity,
+                maxtemp:maxwd,
+                ffdi_final,
+                ID,
+                # elevation,
+                stringybark,
+                ribbonbark,
+                LFMC,
+                VPD,
+                winddir:winddiff,
+                category,
+                aspect,
+                firelines:water4,
+                house.density) |> 
+  filter(!is.na(LFMC))
+g2$ribbonbark[is.na(g2$ribbonbark)] = 0
+nrow(g2)
+## 30
 st_write(g2, "ch3_forGAMs_prefire7_final.gpkg", delete_dsn = T)
 
 # prefire 14
 g1 = st_read("ch3_forGAMs_prefire14_static.gpkg")
 g2 = st_read("ch3_forGAMs_prefire14_allvars.gpkg")
 g3 = st_read("ch3_forGAMs_prefire14_allvars2.gpkg")
+lookup = nrow(g3)
 st_geometry(g3) = NULL
 wind = g3 |>
   dplyr::select(shot_number,
                 winddir:winddiff) |>
   filter(!is.na(winddir))
+nrow(wind) == lookup/2
+## TRUE
 others = g3 |>
   dplyr::select(shot_number,
                 category:water4) |>
   filter(!is.na(water2))
-
+nrow(others) == lookup/2
+## TRUE
 g2 = left_join(g2, wind) |>
   left_join(others) |>
-  left_join(housing)
-
+  left_join(housing) |> 
+  dplyr::select(shot_number,
+                veg,
+                fire_reg,
+                rh98:over_cover,
+                slope,
+                severity,
+                maxtemp:maxwd,
+                ffdi_final,
+                ID,
+                # elevation,
+                stringybark,
+                ribbonbark,
+                LFMC,
+                VPD,
+                winddir:winddiff,
+                category,
+                aspect,
+                firelines:water4,
+                house.density) |> 
+  filter(!is.na(LFMC))
+g2$ribbonbark[is.na(g2$ribbonbark)] = 0
+nrow(g2)
+## 331
 st_write(g2, "ch3_forGAMs_prefire14_final.gpkg", delete_dsn = T)
 
 # prefire 30
 g1 = st_read("ch3_forGAMs_prefire30_static.gpkg")
 g2 = st_read("ch3_forGAMs_prefire30_allvars.gpkg")
 g3 = st_read("ch3_forGAMs_prefire30_allvars2.gpkg")
+lookup = nrow(g3)
 st_geometry(g3) = NULL
 wind = g3 |>
   dplyr::select(shot_number,
                 winddir:winddiff) |>
   filter(!is.na(winddir))
+nrow(wind) == lookup/2
+## TRUE
 others = g3 |>
   dplyr::select(shot_number,
                 category:water4) |>
   filter(!is.na(water2))
-
+nrow(others) == lookup/2
+## TRUE
 g2 = left_join(g2, wind) |>
   left_join(others) |>
-  left_join(housing)
-
+  left_join(housing) |> 
+  dplyr::select(shot_number,
+                veg,
+                fire_reg,
+                rh98:over_cover,
+                slope,
+                severity,
+                maxtemp:maxwd,
+                ffdi_final,
+                ID,
+                # elevation,
+                stringybark,
+                ribbonbark,
+                LFMC,
+                VPD,
+                winddir:winddiff,
+                category,
+                aspect,
+                firelines:water4,
+                house.density) |> 
+  filter(!is.na(LFMC))
+g2$ribbonbark[is.na(g2$ribbonbark)] = 0
+nrow(g2)
+## 3500
 st_write(g2, "ch3_forGAMs_prefire30_final.gpkg", delete_dsn = T)
 
 # prefire 60
 g1 = st_read("ch3_forGAMs_prefire60_static.gpkg")
 g2 = st_read("ch3_forGAMs_prefire60_allvars.gpkg")
 g3 = st_read("ch3_forGAMs_prefire60_allvars2.gpkg")
+lookup = nrow(g3)
 st_geometry(g3) = NULL
 wind = g3 |>
   dplyr::select(shot_number,
                 winddir:winddiff) |>
   filter(!is.na(winddir))
+nrow(wind) == lookup/2
+## TRUE
 others = g3 |>
   dplyr::select(shot_number,
                 category:water4) |>
   filter(!is.na(water2))
-
+nrow(others) == lookup/2
+## TRUE
 g2 = left_join(g2, wind) |>
   left_join(others) |>
-  left_join(housing)
-
+  left_join(housing) |> 
+  dplyr::select(shot_number,
+                veg,
+                fire_reg,
+                rh98:over_cover,
+                slope,
+                severity,
+                maxtemp:maxwd,
+                ffdi_final,
+                ID,
+                # elevation,
+                stringybark,
+                ribbonbark,
+                LFMC,
+                VPD,
+                winddir:winddiff,
+                category,
+                aspect,
+                firelines:water4,
+                house.density) |> 
+  filter(!is.na(LFMC))
+g2$ribbonbark[is.na(g2$ribbonbark)] = 0
+nrow(g2)
+## 10,696
 st_write(g2, "ch3_forGAMs_prefire60_final.gpkg", delete_dsn = T)
 
 # prefire 90
 g1 = st_read("ch3_forGAMs_prefire90_static.gpkg")
 g2 = st_read("ch3_forGAMs_prefire90_allvars.gpkg")
 g3 = st_read("ch3_forGAMs_prefire90_allvars2.gpkg")
+lookup = nrow(g3)
 st_geometry(g3) = NULL
 wind = g3 |>
   dplyr::select(shot_number,
                 winddir:winddiff) |>
   filter(!is.na(winddir))
+nrow(wind) == lookup/2
+## FALSE
+nrow(wind) - lookup/2
+## -3
+
+wind = g3 |>
+  dplyr::select(shot_number,
+                winddir:winddiff)
+wind = wind[duplicated(wind$shot_number),]
+nrow(wind) == lookup/2
+## TRUE
+sum(is.na(wind$winddir))
+## 3
+
 others = g3 |>
   dplyr::select(shot_number,
                 category:water4) |>
   filter(!is.na(water2))
-
+nrow(others) == lookup/2
+## TRUE
 g2 = left_join(g2, wind) |>
   left_join(others) |>
-  left_join(housing)
+  left_join(housing) |> 
+  dplyr::select(shot_number,
+                veg,
+                fire_reg,
+                rh98:over_cover,
+                slope,
+                severity,
+                maxtemp:maxwd,
+                ffdi_final,
+                ID,
+                # elevation,
+                stringybark,
+                ribbonbark,
+                LFMC,
+                VPD,
+                winddir:winddiff,
+                category,
+                aspect,
+                firelines:water4,
+                house.density) |> 
+  filter(!is.na(LFMC))
+g2$ribbonbark[is.na(g2$ribbonbark)] = 0
+nrow(g2)
+## 16,540
+## 6,591 missing LFMC values
 
 st_write(g2, "ch3_forGAMs_prefire90_final.gpkg", delete_dsn = T)
 
 # prefire 180
-g1 = st_read("ch3_forGAMs_prefire180_static.gpkg") ## 62 vars
-g2 = st_read("ch3_forGAMs_prefire180_allvars.gpkg") ## 66 vars
-g3 = st_read("ch3_forGAMs_prefire180_dynamic.gpkg") ## 74 vars
-g4.1 = st_read("ch3_forGAMs_prefire180_allvars2.gpkg") ## 78 vars, with empty geometries
-g4.2 = st_read("ch3_forGAMs_prefire90_allvars2.gpkg") ## 78 vars, with empty geometries
-st_geometry(g4.1) = NULL
-st_geometry(g4.2) = NULL
-
-g4 = full_join(g4.1, g4.2)
-any(duplicated(g4$shot_number))
+g1 = st_read("ch3_forGAMs_prefire180_static.gpkg") ## 62 vars, 52,462 rows
+g2 = st_read("ch3_forGAMs_prefire180_allvars.gpkg") ## 66 vars, 52,462 rows
+g3 = st_read("ch3_forGAMs_prefire180_dynamic.gpkg") ## 74 vars, 52,462 rows
+g4 = st_read("ch3_forGAMs_prefire180_allvars2.gpkg") ## 78 vars, 29,334 rows
+lookup = nrow(g3 |> filter(shot_number %in% g4$shot_number))
+lookup2 = nrow(g3)
+st_geometry(g4) = NULL
+wind = g4 |>
+  dplyr::select(shot_number,
+                winddir:winddiff)
+nrow(wind) == lookup
 ## TRUE
 
-dups = g4$shot_number[duplicated(g4$shot_number)]
-dups = g4[g4$shot_number %in% dups,]
-dups[dups$shot_number == unique(dups$shot_number)[1],] ## g4.1 has messed up dates- wind data extracted wrong
-
-wind1 = g4.1 |>
+gref = st_read("ch3_forGAMs_prefire90_final.gpkg")
+any(gref$shot_number %in% wind$shot_number)
+## FALSE
+st_geometry(gref) = NULL
+wind2 = gref |> 
   dplyr::select(shot_number,
-                winddir:winddiff) |>
-  filter(!is.na(winddir))
-wind2 = g4.2 |>
+                winddir:winddiff)
+
+g3.1 = right_join(g3, wind) |>
+  dplyr::select(-house.density) |>
+  left_join(housing) |> 
   dplyr::select(shot_number,
-                winddir:winddiff) |>
-  filter(!is.na(winddir))
-any(wind1$shot_number %in% wind2$shot_number)
-## TRUE
-wind = full_join(wind1, wind2)
-any(duplicated(wind$shot_number))
-## TRUE
+                veg,
+                fire_reg,
+                rh98:over_cover,
+                slope,
+                severity,
+                maxtemp:maxwd,
+                ffdi_final,
+                ID,
+                # elevation,
+                stringybark,
+                ribbonbark,
+                LFMC,
+                VPD,
+                winddir:winddiff,
+                category,
+                aspect,
+                firelines:water4,
+                house.density) |> 
+  filter(!is.na(LFMC))
 
-dups = wind$shot_number[duplicated(wind$shot_number)]
-dups = wind[wind$shot_number %in% dups,]
-
-others = g3 |>
+g3.2 = right_join(g3, wind2) |>
+  dplyr::select(-house.density) |>
+  left_join(housing) |> 
   dplyr::select(shot_number,
-                category:water4) |>
-  filter(!is.na(water2))
+                veg,
+                fire_reg,
+                rh98:over_cover,
+                slope,
+                severity,
+                maxtemp:maxwd,
+                ffdi_final,
+                ID,
+                # elevation,
+                stringybark,
+                ribbonbark,
+                LFMC,
+                VPD,
+                winddir:winddiff,
+                category,
+                aspect,
+                firelines:water4,
+                house.density) |> 
+  filter(!is.na(LFMC))
 
-g2 = left_join(g2, wind) |>
-  left_join(others) |>
-  left_join(housing)
+g3 = rbind(g3.1, g3.2)
 
-st_write(g2, "ch3_forGAMs_prefire180_final.gpkg", delete_dsn = T)
+g3$ribbonbark[is.na(g3$ribbonbark)] = 0
+g3$stringybark[is.na(g3$stringybark)] = 0
+nrow(g3)
+## 37,176
+
+st_write(g3, "ch3_forGAMs_prefire180_final.gpkg", delete_dsn = T)
