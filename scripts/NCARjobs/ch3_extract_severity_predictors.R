@@ -599,6 +599,7 @@ g2 = left_join(g2, wind) |>
                 house.density) |> 
   filter(!is.na(LFMC))
 g2$ribbonbark[is.na(g2$ribbonbark)] = 0
+g2$stringybark[is.na(g2$stringybark)] = 0
 nrow(g2)
 ## 30
 st_write(g2, "ch3_forGAMs_prefire7_final.gpkg", delete_dsn = T)
@@ -645,6 +646,7 @@ g2 = left_join(g2, wind) |>
                 house.density) |> 
   filter(!is.na(LFMC))
 g2$ribbonbark[is.na(g2$ribbonbark)] = 0
+g2$stringybark[is.na(g2$stringybark)] = 0
 nrow(g2)
 ## 331
 st_write(g2, "ch3_forGAMs_prefire14_final.gpkg", delete_dsn = T)
@@ -691,6 +693,7 @@ g2 = left_join(g2, wind) |>
                 house.density) |> 
   filter(!is.na(LFMC))
 g2$ribbonbark[is.na(g2$ribbonbark)] = 0
+g2$stringybark[is.na(g2$stringybark)] = 0
 nrow(g2)
 ## 3500
 st_write(g2, "ch3_forGAMs_prefire30_final.gpkg", delete_dsn = T)
@@ -737,6 +740,7 @@ g2 = left_join(g2, wind) |>
                 house.density) |> 
   filter(!is.na(LFMC))
 g2$ribbonbark[is.na(g2$ribbonbark)] = 0
+g2$stringybark[is.na(g2$stringybark)] = 0
 nrow(g2)
 ## 10,696
 st_write(g2, "ch3_forGAMs_prefire60_final.gpkg", delete_dsn = T)
@@ -795,6 +799,7 @@ g2 = left_join(g2, wind) |>
                 house.density) |> 
   filter(!is.na(LFMC))
 g2$ribbonbark[is.na(g2$ribbonbark)] = 0
+g2$stringybark[is.na(g2$stringybark)] = 0
 nrow(g2)
 ## 16,540
 ## 6,591 missing LFMC values
