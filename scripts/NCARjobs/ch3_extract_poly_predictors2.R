@@ -4,25 +4,25 @@ library(tidyverse)
 library(exactextractr)
 library(rgeos)
 
-# setwd("/glade/scratch/kjfuller/data/LFMC")
-# # setwd("E:/chapter3/from Rachael/R project/LFMC/LFMC/GEE_LFMC/LFMC_rasters/GEE_v20May2020_RevisedMask/")
-# lfmc = list.files()
-# lfmc = data.frame(files = lfmc)
-# lfmc$date = as.POSIXct(substr(lfmc$files, 6, 15), format = "%Y_%m_%d")
-# ## using as.Date led to problems for this extraction but the severity data extraction did fine- double-checked
-
-setwd("/glade/scratch/kjfuller/data/VPD")
-# setwd("E:/chapter3/from Rachael/VPD")
-vpd = list.files()
-vpd = data.frame(files = vpd)
-vpd$date = as.POSIXct(substr(vpd$files, 5, 12), format = "%Y%m%d")
-
-# # load isochrons ####
+# # start ####
+# # setwd("/glade/scratch/kjfuller/data/LFMC")
+# # # setwd("E:/chapter3/from Rachael/R project/LFMC/LFMC/GEE_LFMC/LFMC_rasters/GEE_v20May2020_RevisedMask/")
+# # lfmc = list.files()
+# # lfmc = data.frame(files = lfmc)
+# # lfmc$date = as.POSIXct(substr(lfmc$files, 6, 15), format = "%Y_%m_%d")
+# # ## using as.Date led to problems for this extraction but the severity data extraction did fine- double-checked
+# 
+# setwd("/glade/scratch/kjfuller/data/VPD")
+# # setwd("E:/chapter3/from Rachael/VPD")
+# vpd = list.files()
+# vpd = data.frame(files = vpd)
+# vpd$date = as.POSIXct(substr(vpd$files, 5, 12), format = "%Y%m%d")
+# 
 # setwd("/glade/scratch/kjfuller/data/chapter3")
 # # setwd("E:/chapter3/for GAMs")
 # g = st_read("ch3_forGAMs_poly_prefire180_structure.gpkg")
 # targetcrs = st_crs(g)
-# g = g |> 
+# g = g |>
 #   dplyr::select(ID,
 #                 poly_sD,
 #                 poly_eD)
@@ -40,27 +40,27 @@ vpd$date = as.POSIXct(substr(vpd$files, 5, 12), format = "%Y%m%d")
 # dynamicfun = function(x){
 #   if( .GlobalEnv$counter == .GlobalEnv$size )
 #   {length(.GlobalEnv$l) <- .GlobalEnv$size <- .GlobalEnv$size * 2}
-#   
+# 
 #   g_temp = g |>
 #     filter(ID == ids[x])
-#   
+# 
 #   ## select LFMC values that were calculated for dates before the fire started
 #   lfmc_temp = lfmc |>
 #     filter(as.numeric(difftime(min(g_temp$poly_sD), date)) > 0)
 #   ## select the last possible pre-fire LFMC value
 #   minT = lfmc_temp |>
 #     filter(date == max(lfmc_temp$date))
-#   
+# 
 #   ## select LFMC values that were calculated for dates before the fire end
-#   lfmc_temp = lfmc |> 
+#   lfmc_temp = lfmc |>
 #     filter(as.numeric(difftime(max(g_temp$poly_eD), date)) > 0)
 #   ## select the last possible during-fire LFMC value
 #   maxT = lfmc_temp |>
 #     filter(date == max(lfmc_temp$date))
-#   
-#   lfmc_temp = lfmc |> 
+# 
+#   lfmc_temp = lfmc |>
 #     filter(date >= minT$date & date <= maxT$date)
-#   
+# 
 #   l = list()
 #   if(nrow(lfmc_temp) > 0){
 #     for(v in c(1:nrow(lfmc_temp))){
@@ -73,7 +73,7 @@ vpd$date = as.POSIXct(substr(vpd$files, 5, 12), format = "%Y%m%d")
 #     g_temp$LFMC = raster::extract(r, g_temp, method = 'simple', fun = median, na.rm = T)
 #   }
 #   g_temp$LFMC_sD = lfmc_temp$date[1]
-#   
+# 
 #   if(any(is.na(g_temp$LFMC))){
 #     g_temp2 = g_temp |>
 #       filter(is.na(LFMC))
@@ -83,12 +83,12 @@ vpd$date = as.POSIXct(substr(vpd$files, 5, 12), format = "%Y%m%d")
 #         filter(date < g_temp2$LFMC_sD[1])
 #       lfmc_temp = lfmc_temp |>
 #         filter(date == max(lfmc_temp$date))
-#       
+# 
 #       r = raster(lfmc_temp$files[1])
-#       
+# 
 #       g_temp2$LFMC = raster::extract(r, g_temp2, method = 'simple', fun = median, na.rm = T)
 #       g_temp2$LFMC_sD = lfmc_temp$date[1]
-#       
+# 
 #       if(any(!is.na(g_temp2$LFMC))){
 #         print("Earlier LFMC value extracted, at least some values not NA")
 #         g_temp = g_temp |>
@@ -100,9 +100,9 @@ vpd$date = as.POSIXct(substr(vpd$files, 5, 12), format = "%Y%m%d")
 #     }
 #   }
 #   # l[[i]] = g_temp
-#   
+# 
 #   st_geometry(g_temp) = NULL
-#   
+# 
 #   .GlobalEnv$counter <- .GlobalEnv$counter + 1
 #   .GlobalEnv$l[[.GlobalEnv$counter]] <- g_temp
 # }
@@ -112,13 +112,210 @@ vpd$date = as.POSIXct(substr(vpd$files, 5, 12), format = "%Y%m%d")
 # }
 # 
 # g_temp = bind_rows(l)
+# g = left_join(g, g_temp) |>
+#   st_transform(crs = targetcrs)
+# 
+# setwd("/glade/scratch/kjfuller/data/chapter3")
+# # setwd("E:/chapter3/for GAMs")
+# # st_write(g, "ch3_forGAMs_poly_prefire180_LFMC.gpkg", delete_dsn = T)
+# g = st_read("ch3_forGAMs_poly_prefire180_LFMC.gpkg")
+# targetcrs = st_crs(g)
+# 
+# # VPD ####
+# setwd("/glade/scratch/kjfuller/data/VPD")
+# # setwd("E:/chapter3/from Rachael/VPD")
+# r = raster(vpd$files[1])
+# g = st_transform(g, crs = st_crs(4326))
+# ids = unique(g$ID)
+# 
+# counter <- 0
+# l <- list(NULL)
+# size <- 1
+# dynamicfun = function(x){
+#   if( .GlobalEnv$counter == .GlobalEnv$size )
+#   {length(.GlobalEnv$l) <- .GlobalEnv$size <- .GlobalEnv$size * 2}
+#   g_temp = g |>
+#     filter(ID == ids[i])
+#   
+#   ## select VPD values that were calculated for dates before the fire started
+#   vpd_temp = vpd |>
+#     filter(as.numeric(difftime(min(g_temp$poly_sD), date)) >= 0)
+#   ## select the last possible pre-fire VPD value
+#   minT = vpd_temp |>
+#     filter(date == max(vpd_temp$date))
+#   
+#   ## select VPD values that were calculated for dates before the fire end
+#   vpd_temp = vpd |> 
+#     filter(as.numeric(difftime(max(g_temp$poly_eD), date)) >= 0)
+#   ## select the last possible during-fire VPD value
+#   maxT = vpd_temp |>
+#     filter(date == max(vpd_temp$date))
+#   
+#   vpd_temp = vpd |> 
+#     filter(date >= minT$date & date <= maxT$date)
+#   
+#   l = list()
+#   if(nrow(vpd_temp) > 0){
+#     for(v in c(1:nrow(vpd_temp))){
+#       r_temp = raster(vpd_temp$files[v])
+#       l[[v]] = raster::extract(r_temp, g_temp, method = 'simple')
+#     }
+#     g_temp$VPD = median(unlist(l), na.rm = T)
+#   } else {
+#     r = raster(vpd_temp$files[1])
+#     g_temp$VPD = raster::extract(r, g_temp, method = 'simple', fun = median, na.rm = T)
+#   }
+#   g_temp$VPD_sD = vpd_temp$date[1]
+#   
+#   # l[[i]] = g_temp
+#   
+#   st_geometry(g_temp) = NULL
+#   
+#   .GlobalEnv$counter <- .GlobalEnv$counter + 1
+#   .GlobalEnv$l[[.GlobalEnv$counter]] <- g_temp
+# }
+# 
+# for(i in c(1:length(ids))){
+#   dynamicfun(i)
+#   print(paste0("VPD ", i))
+# }
+# 
+# g_temp = bind_rows(l)
 # g = left_join(g, g_temp) |> 
 #   st_transform(crs = targetcrs)
+# 
+# setwd("/glade/scratch/kjfuller/data/chapter3")
+# # setwd("E:/chapter3/for GAMs")
+# st_write(g, "ch3_forGAMs_poly_prefire180_dynamic.gpkg", delete_dsn = T)
+# 
+# ## still need to extract: fire type categories (FESM directly) -> not all isochrons align with FESM fires
+# ## aspect, wind direction done, fire regime types (in order to restrict less representative veg types), number of dwellings, distance to roads and distance to water (take the min of both) done
+
+# start ####
+setwd("/glade/scratch/kjfuller/data/LFMC")
+# setwd("E:/chapter3/from Rachael/R project/LFMC/LFMC/GEE_LFMC/LFMC_rasters/GEE_v20May2020_RevisedMask/")
+lfmc = list.files()
+lfmc = data.frame(files = lfmc)
+lfmc$date = as.POSIXct(substr(lfmc$files, 6, 15), format = "%Y_%m_%d")
+## using as.Date led to problems for this extraction but the severity data extraction did fine- double-checked
+
+setwd("/glade/scratch/kjfuller/data/VPD")
+# setwd("E:/chapter3/from Rachael/VPD")
+vpd = list.files()
+vpd = data.frame(files = vpd)
+vpd$date = as.POSIXct(substr(vpd$files, 5, 12), format = "%Y%m%d")
 
 setwd("/glade/scratch/kjfuller/data/chapter3")
 # setwd("E:/chapter3/for GAMs")
-# st_write(g, "ch3_forGAMs_poly_prefire180_LFMC.gpkg", delete_dsn = T)
-g = st_read("ch3_forGAMs_poly_prefire180_LFMC.gpkg")
+g = st_read("ch3_forGAMs_poly_prefire180_dynamic.gpkg")
+targetcrs = st_crs(g)
+g = g |>
+  dplyr::select(ID,
+                poly_sD,
+                poly_eD,
+                LFMC,
+                LFMC_sD,
+                VPD,
+                VPD_sD)
+
+# LFMC ####
+setwd("/glade/scratch/kjfuller/data/LFMC")
+# setwd("E:/chapter3/from Rachael/R project/LFMC/LFMC/GEE_LFMC/LFMC_rasters/GEE_v20May2020_RevisedMask/")
+r = raster(lfmc$files[1])
+g = st_transform(g, crs = st_crs(r))
+ids = unique(g$ID)
+
+counter <- 0
+l <- list(NULL)
+size <- 1
+dynamicfun = function(x){
+  if( .GlobalEnv$counter == .GlobalEnv$size )
+  {length(.GlobalEnv$l) <- .GlobalEnv$size <- .GlobalEnv$size * 2}
+  
+  g_temp = g |>
+    filter(ID == ids[x])
+  
+  ## select LFMC values that were calculated for dates before the fire started
+  lfmc_temp = lfmc |>
+    filter(as.numeric(difftime(min(g_temp$poly_sD), date)) > 0)
+  ## select the last possible pre-fire LFMC value
+  minT = lfmc_temp |>
+    filter(date == max(lfmc_temp$date))
+  
+  ## select LFMC values that were calculated for dates before the fire end
+  lfmc_temp = lfmc |>
+    filter(as.numeric(difftime(max(g_temp$poly_eD), date)) > 0)
+  ## select the last possible during-fire LFMC value
+  maxT = lfmc_temp |>
+    filter(date == max(lfmc_temp$date))
+  
+  lfmc_temp = lfmc |>
+    filter(date >= minT$date & date <= maxT$date)
+  
+  l = list()
+  if(nrow(lfmc_temp) > 0){
+    for(v in c(1:nrow(lfmc_temp))){
+      r_temp = raster(lfmc_temp$files[v])
+      l[[v]] = raster::extract(r_temp, g_temp, method = 'simple')
+    }
+    g_temp$LFMC_max = max(unlist(l), na.rm = T)
+    g_temp$LFMC_min = min(unlist(l), na.rm = T)
+    
+  } else {
+    r = raster(lfmc_temp$files[1])
+    LFMC = raster::extract(r, g_temp, method = 'simple')
+    g_temp$LFMC_max = max(unlist(LFMC), na.rm = T)
+    g_temp$LFMC_min = min(unlist(LFMC), na.rm = T)
+  }
+  g_temp$LFMC_sD2 = lfmc_temp$date[1]
+  
+  if(any(is.na(g_temp$LFMC))){
+    g_temp2 = g_temp |>
+      filter(is.na(LFMC))
+    if(g_temp2$LFMC_sD != min(lfmc$date)){
+      print("LFMC values were NA, attempting to extract earlier LFMC values")
+      lfmc_temp = lfmc |>
+        filter(date < g_temp2$LFMC_sD[1])
+      lfmc_temp = lfmc_temp |>
+        filter(date == max(lfmc_temp$date))
+      
+      r = raster(lfmc_temp$files[1])
+      LFMC = raster::extract(r, g_temp2, method = 'simple')
+      g_temp2$LFMC_max = max(unlist(LFMC), na.rm = T)
+      g_temp2$LFMC_min = min(unlist(LFMC), na.rm = T)
+      
+      g_temp2$LFMC_sD2 = lfmc_temp$date[1]
+      
+      if(any(!is.na(g_temp2$LFMC))){
+        print("Earlier LFMC value extracted, at least some values not NA")
+        g_temp = g_temp |>
+          filter(!is.na(LFMC)) |>
+          rbind(g_temp2)
+      } else {
+        print("Earlier LFMC values were also NA")
+      }
+    }
+  }
+  # l[[i]] = g_temp
+  
+  st_geometry(g_temp) = NULL
+  
+  .GlobalEnv$counter <- .GlobalEnv$counter + 1
+  .GlobalEnv$l[[.GlobalEnv$counter]] <- g_temp
+}
+for(i in c(1:length(ids))){
+  dynamicfun(i)
+  print(paste0("LFMC ", i))
+}
+
+g_temp = bind_rows(l)
+g = left_join(g, g_temp) |>
+  st_transform(crs = targetcrs)
+
+setwd("/glade/scratch/kjfuller/data/chapter3")
+# setwd("E:/chapter3/for GAMs")
+st_write(g, "ch3_forGAMs_poly_prefire180_LFMC2.gpkg", delete_dsn = T)
+# g = st_read("ch3_forGAMs_poly_prefire180_LFMC2.gpkg")
 targetcrs = st_crs(g)
 
 # VPD ####
@@ -160,12 +357,16 @@ dynamicfun = function(x){
       r_temp = raster(vpd_temp$files[v])
       l[[v]] = raster::extract(r_temp, g_temp, method = 'simple')
     }
-    g_temp$VPD = median(unlist(l), na.rm = T)
+    g_temp$VPD_max = max(unlist(l), na.rm = T)
+    g_temp$VPD_min = min(unlist(l), na.rm = T)
+    
   } else {
     r = raster(vpd_temp$files[1])
-    g_temp$VPD = raster::extract(r, g_temp, method = 'simple', fun = median, na.rm = T)
+    VPD = raster::extract(r, g_temp, method = 'simple')
+    g_temp$VPD_max = max(unlist(VPD), na.rm = T)
+    g_temp$VPD_min = min(unlist(VPD), na.rm = T)
   }
-  g_temp$VPD_sD = vpd_temp$date[1]
+  g_temp$VPD_sD2 = vpd_temp$date[1]
   
   # l[[i]] = g_temp
   
@@ -186,7 +387,7 @@ g = left_join(g, g_temp) |>
 
 setwd("/glade/scratch/kjfuller/data/chapter3")
 # setwd("E:/chapter3/for GAMs")
-st_write(g, "ch3_forGAMs_poly_prefire180_dynamic.gpkg", delete_dsn = T)
+st_write(g, "ch3_forGAMs_poly_prefire180_dynamic2.gpkg", delete_dsn = T)
 
 ## still need to extract: fire type categories (FESM directly) -> not all isochrons align with FESM fires
 ## aspect, wind direction done, fire regime types (in order to restrict less representative veg types), number of dwellings, distance to roads and distance to water (take the min of both) done
