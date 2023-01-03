@@ -9,16 +9,14 @@ library(UBL)
 setwd("/glade/scratch/kjfuller/data/chapter3")
 thinfun = function(x){
   # setwd("E:/chapter3/for GAMs")
-  g = st_read(paste0("ch3_forGAMs_prefire", x, "_allvars2.gpkg"))
+  g = st_read(paste0("ch3_forGAMs_prefire", x, "_final.gpkg"))
   g = g |>
-    filter(!is.na(LFMC) & !is.na(stringybark) & !is.na(ribbonbark)) |>
     filter(fire_reg != 7 & fire_reg != 9)
   g$fire_reg = as.factor(g$fire_reg)
   targetcrs = st_crs(g)
   g$lon = st_coordinates(g)[,1]
   g$lat = st_coordinates(g)[,2]
   st_geometry(g) = NULL
-  g$house.density[is.na(g$house.density)] = 0
 
   l = list()
   for(i in c(1:length(unique(g$fire_reg)))){
@@ -28,9 +26,9 @@ thinfun = function(x){
     l[[i]] = g |>
       inner_join(l[[i]], by = c("lon" = "Longitude", "lat" = "Latitude"))
   }
-  g_thin = bind_rows(l)
-  g_thin = st_as_sf(g_thin, coords = c("lon", "lat"), crs = targetcrs)
-  st_write(g_thin, paste0("ch3_forGAMs_prefire", x, "_thinned1.gpkg"), delete_dsn = T)
+  g = bind_rows(l)
+  g = st_as_sf(g, coords = c("lon", "lat"), crs = targetcrs)
+  st_write(g, paste0("ch3_forGAMs_prefire", x, "_thinned1.gpkg"), delete_dsn = T)
   
   g = st_read(paste0("ch3_forGAMs_prefire", x, "_thinned1.gpkg"))
   targetcrs = st_crs(g)
@@ -42,37 +40,33 @@ thinfun = function(x){
   g$winddiff = cos(g$winddiff * pi / 180)
   
   g = g %>%
-    dplyr::select(severity,
+    dplyr::select(
+      # shot_number,
+                  # veg,
                   fire_reg,
-                  rh98,
-                  fhd_normal,
-                  cover_z_1,
-                  over_cover,
+                  rh98:over_cover,
                   slope,
-                  elevation,
-                  northness,
-                  eastness,
-                  # TSF.hist,
+                  severity,
+                  maxtemp:maxwd,
                   ffdi_final,
-                  category,
-                  LFMC,
-                  VPD,
+                  # ID,
+                  # elevation,
                   stringybark,
                   ribbonbark,
-                  house.density,
-                  aspect,
-                  firelines,
-                  roads,
-                  water2,
-                  water3,
-                  water4,
+                  LFMC,
+                  VPD,
+                  # winddir:windgust,
                   winddiff,
-                  maxws,
+                  category,
+                  aspect,
+                  firelines:water4,
+                  house.density,
                   lon,
                   lat)
   g$fire_reg = as.factor(g$fire_reg)
   g$severity = as.factor(g$severity)
   g$category = as.factor(g$category)
+  g = na.omit(g)
   
   for(i in c(1:length(unique(g$severity)))){
     g1 = g |> 
@@ -95,6 +89,6 @@ thinfun = function(x){
 thinfun(7)
 thinfun(14)
 thinfun(30)
-# thinfun(60)
-# thinfun(90)
-# thinfun(180)
+thinfun(60)
+thinfun(90)
+thinfun(180)
