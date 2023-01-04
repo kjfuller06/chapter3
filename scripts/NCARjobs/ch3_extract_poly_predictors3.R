@@ -320,7 +320,7 @@ library(rgeos)
 # process all outputs ####
 setwd("E:/chapter3/for GAMs")
 g1 = st_read("ch3_forGAMs_poly_prefire180_structure.gpkg")
-g1$prog = (st_area(g1)/1000000)/g1$progtime
+g1$prog = as.numeric((st_area(g1)/1000000)/g1$progtime)
 
 g2 = st_read("ch3_forGAMs_poly_prefire180_elevation.gpkg") |>
   dplyr::select(ID,
@@ -399,8 +399,6 @@ summary(g13)
 g14 = st_read("ch3_forGAMs_poly_prefire180_dynamic.gpkg")
 st_geometry(g14) = NULL
 summary(g14)
-all(g14$poly_sD > g14$LFMC_sD)
-## TRUE
 all(g14$poly_sD >= g14$VPD_sD)
 ## TRUE
 g14 = g14 |>
@@ -451,36 +449,14 @@ g = g1 |>
   left_join(g15) |>
   left_join(g16) |> 
   filter(!is.na(fire_reg)) |>
-  filter(!is.na(LFMC))
-rm(g1, g2, g3, 
-   # g4, 
-   g5, g6, g7, g8, g9, g10, g11, g12, g13, g14, g15, g16)
-
-g$winddiff.iso = cos((g$aspect - g$maxwd) * pi / 180)
-g$winddiff.bom = cos((g$aspect - g$winddir) * pi / 180)
-
-# g = g |> 
-#   filter(prog < 202)
-g$breaks = apply(g |> dplyr::select(firelines, roads), 1, FUN = min, na.rm = T)
-g$breaks.all2 = apply(g |> dplyr::select(firelines, roads, water2), 1, FUN = min, na.rm = T)
-g$breaks.all3 = apply(g |> dplyr::select(firelines, roads, water2, water3), 1, FUN = min, na.rm = T)
-g$breaks.all4 = apply(g |> dplyr::select(firelines, roads, water2, water3, water4), 1, FUN = min, na.rm = T)
-
-g$ffdi_cat = NA
-g$ffdi_cat[g$ffdi_final <= 12] = "low"
-g$ffdi_cat[g$ffdi_final > 12 & g$ffdi_final <= 25] = "high"
-g$ffdi_cat[g$ffdi_final > 25 & g$ffdi_final <= 49] = "very high"
-g$ffdi_cat[g$ffdi_final > 49 & g$ffdi_final <= 74] = "severe +"
-g$ffdi_cat[g$ffdi_final > 74 & g$ffdi_final <= 99] = "severe +"
-g$ffdi_cat[g$ffdi_final > 99] = "severe +"
-g$ffdi_cat = factor(g$ffdi_cat, levels = c("low",
-                                           "high",
-                                           "very high",
-                                           "severe +"))
-
-g = g |>
+  filter(!is.na(LFMC)) |> 
   filter(prog < 1000) |> 
   filter(fire_reg != 7 & fire_reg != 9)
+rm(g1, g2, g3,
+   # g4,
+   g5, g6, g7, g8, g9, g10, g11, g12, g13, g14, g15, g16)
+
+g$winddiff.bom = cos((g$aspect - g$winddir) * pi / 180)
 
 # prefire 180 ####
 setwd("E:/chapter3/GEDI_FESM")
@@ -494,9 +470,23 @@ gref = gref |>
 length(unique(gref$ID)) == nrow(gref)
 ## TRUE
 gref = inner_join(g, gref)
+gref$winddiff.iso = cos((gref$aspect - gref$maxwd) * pi / 180)
+
+gref$ffdi_cat = NA
+gref$ffdi_cat[gref$ffdi_final <= 12] = "one"
+gref$ffdi_cat[gref$ffdi_final > 12 & gref$ffdi_final <= 25] = "two"
+gref$ffdi_cat[gref$ffdi_final > 25 & gref$ffdi_final <= 49] = "three"
+gref$ffdi_cat[gref$ffdi_final > 49 & gref$ffdi_final <= 74] = "four"
+gref$ffdi_cat[gref$ffdi_final > 74 & gref$ffdi_final <= 99] = "four"
+gref$ffdi_cat[gref$ffdi_final > 99] = "four"
+gref$ffdi_cat = factor(gref$ffdi_cat, levels = c("one",
+                                           "two",
+                                           "three",
+                                           "four"))
+
 summary(gref)
 nrow(gref)
-## 1,727
+## 1,726
 setwd("E:/chapter3/for GAMs")
 st_write(gref, "ch3_forGAMs_poly_prefire180_final.gpkg", delete_dsn = T)
 
@@ -512,8 +502,21 @@ gref = gref |>
 length(unique(gref$ID)) == nrow(gref)
 ## TRUE
 gref = inner_join(g, gref)
+gref$winddiff.iso = cos((gref$aspect - gref$maxwd) * pi / 180)
+
+gref$ffdi_cat = NA
+gref$ffdi_cat[gref$ffdi_final <= 12] = "one"
+gref$ffdi_cat[gref$ffdi_final > 12 & gref$ffdi_final <= 25] = "two"
+gref$ffdi_cat[gref$ffdi_final > 25 & gref$ffdi_final <= 49] = "three"
+gref$ffdi_cat[gref$ffdi_final > 49 & gref$ffdi_final <= 74] = "four"
+gref$ffdi_cat[gref$ffdi_final > 74 & gref$ffdi_final <= 99] = "four"
+gref$ffdi_cat[gref$ffdi_final > 99] = "four"
+gref$ffdi_cat = factor(gref$ffdi_cat, levels = c("one",
+                                                 "two",
+                                                 "three",
+                                                 "four"))
 nrow(gref)
-## 806
+## 805
 setwd("E:/chapter3/for GAMs")
 st_write(gref, "ch3_forGAMs_poly_prefire90_final.gpkg", delete_dsn = T)
 
@@ -529,8 +532,22 @@ gref = gref |>
 length(unique(gref$ID)) == nrow(gref)
 ## TRUE
 gref = inner_join(g, gref)
+gref$winddiff.iso = cos((gref$aspect - gref$maxwd) * pi / 180)
+
+gref$ffdi_cat = NA
+gref$ffdi_cat[gref$ffdi_final <= 12] = "one"
+gref$ffdi_cat[gref$ffdi_final > 12 & gref$ffdi_final <= 25] = "two"
+gref$ffdi_cat[gref$ffdi_final > 25 & gref$ffdi_final <= 49] = "three"
+gref$ffdi_cat[gref$ffdi_final > 49 & gref$ffdi_final <= 74] = "four"
+gref$ffdi_cat[gref$ffdi_final > 74 & gref$ffdi_final <= 99] = "four"
+gref$ffdi_cat[gref$ffdi_final > 99] = "four"
+gref$ffdi_cat = factor(gref$ffdi_cat, levels = c("one",
+                                                 "two",
+                                                 "three",
+                                                 "four"))
+
 nrow(gref)
-## 543
+## 542
 setwd("E:/chapter3/for GAMs")
 st_write(gref, "ch3_forGAMs_poly_prefire60_final.gpkg", delete_dsn = T)
 
@@ -546,6 +563,20 @@ gref = gref |>
 length(unique(gref$ID)) == nrow(gref)
 ## TRUE
 gref = inner_join(g, gref)
+gref$winddiff.iso = cos((gref$aspect - gref$maxwd) * pi / 180)
+
+gref$ffdi_cat = NA
+gref$ffdi_cat[gref$ffdi_final <= 12] = "one"
+gref$ffdi_cat[gref$ffdi_final > 12 & gref$ffdi_final <= 25] = "two"
+gref$ffdi_cat[gref$ffdi_final > 25 & gref$ffdi_final <= 49] = "three"
+gref$ffdi_cat[gref$ffdi_final > 49 & gref$ffdi_final <= 74] = "four"
+gref$ffdi_cat[gref$ffdi_final > 74 & gref$ffdi_final <= 99] = "four"
+gref$ffdi_cat[gref$ffdi_final > 99] = "four"
+gref$ffdi_cat = factor(gref$ffdi_cat, levels = c("one",
+                                                 "two",
+                                                 "three",
+                                                 "four"))
+
 nrow(gref)
 ## 161
 setwd("E:/chapter3/for GAMs")
@@ -563,6 +594,20 @@ gref = gref |>
 length(unique(gref$ID)) == nrow(gref)
 ## TRUE
 gref = inner_join(g, gref)
+gref$winddiff.iso = cos((gref$aspect - gref$maxwd) * pi / 180)
+
+gref$ffdi_cat = NA
+gref$ffdi_cat[gref$ffdi_final <= 12] = "one"
+gref$ffdi_cat[gref$ffdi_final > 12 & gref$ffdi_final <= 25] = "two"
+gref$ffdi_cat[gref$ffdi_final > 25 & gref$ffdi_final <= 49] = "three"
+gref$ffdi_cat[gref$ffdi_final > 49 & gref$ffdi_final <= 74] = "four"
+gref$ffdi_cat[gref$ffdi_final > 74 & gref$ffdi_final <= 99] = "four"
+gref$ffdi_cat[gref$ffdi_final > 99] = "four"
+gref$ffdi_cat = factor(gref$ffdi_cat, levels = c("one",
+                                                 "two",
+                                                 "three",
+                                                 "four"))
+
 nrow(gref)
 ## 32
 setwd("E:/chapter3/for GAMs")
@@ -580,6 +625,20 @@ gref = gref |>
 length(unique(gref$ID)) == nrow(gref)
 ## TRUE
 gref = inner_join(g, gref)
+gref$winddiff.iso = cos((gref$aspect - gref$maxwd) * pi / 180)
+
+gref$ffdi_cat = NA
+gref$ffdi_cat[gref$ffdi_final <= 12] = "one"
+gref$ffdi_cat[gref$ffdi_final > 12 & gref$ffdi_final <= 25] = "two"
+gref$ffdi_cat[gref$ffdi_final > 25 & gref$ffdi_final <= 49] = "three"
+gref$ffdi_cat[gref$ffdi_final > 49 & gref$ffdi_final <= 74] = "four"
+gref$ffdi_cat[gref$ffdi_final > 74 & gref$ffdi_final <= 99] = "four"
+gref$ffdi_cat[gref$ffdi_final > 99] = "four"
+gref$ffdi_cat = factor(gref$ffdi_cat, levels = c("one",
+                                                 "two",
+                                                 "three",
+                                                 "four"))
+
 nrow(gref)
 ## 14
 setwd("E:/chapter3/for GAMs")

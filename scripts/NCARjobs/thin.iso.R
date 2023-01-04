@@ -13,6 +13,14 @@ thinfun = function(x){
   targetcrs = st_crs(g)
   st_geometry(g) = NULL
   
+  g$breaks = apply(g |> dplyr::select(firelines, roads), 1, FUN = min, na.rm = T)
+  g$breaks.all2 = apply(g |> dplyr::select(firelines, roads, water2), 1, FUN = min, na.rm = T)
+  g$breaks.all3 = apply(g |> dplyr::select(firelines, roads, water2, water3), 1, FUN = min, na.rm = T)
+  g$breaks.all4 = apply(g |> dplyr::select(firelines, roads, water2, water3, water4), 1, FUN = min, na.rm = T)
+  
+  g = g |> 
+    filter(prog < 200)
+  
   g = g %>%
     dplyr::select(prog,
                   fire_reg,
@@ -72,20 +80,24 @@ thinfun = function(x){
                   house.density)
   g$fire_reg = as.factor(g$fire_reg)
   g = na.omit(g)
+  g$ffdi_cat = factor(g$ffdi_cat, levels = c("one",
+                                             "two",
+                                             "three",
+                                             "four"))
   
-  g |> group_by(ffdi_cat) |> tally()
-  C.perc = list("low" = 2, "high" = 1.5, "very high" = 0.9, "severe +" = 1) 
+  # g |> group_by(ffdi_cat) |> tally()
+  C.list = list(one = 1, two = (366/750), three = (366/535), four = 2) 
   memory.limit(size=50000)
   smote <- SmoteClassif(ffdi_cat ~ .,
                         g,
-                        dist = "HEOM", C.perc = "balance", k = 3)
+                        dist = "HEOM", C.perc = C.list, k = 3)
   smote <- SmoteClassif(prog ~ .,
                         smote,
                         dist = "HEOM", C.perc = "balance", k = 3)
   write.csv(smote, paste0("ch3_forGAMs_poly_prefire", x, "_smote.csv"), row.names = F)
 }
 
-thinfun(7)
+# thinfun(7) ## "low" is absent from dataset
 thinfun(14)
 thinfun(30)
 thinfun(60)
