@@ -37,8 +37,9 @@ setwd("/glade/scratch/kjfuller/data")
 r = raster("NSW_stringybark_distribution.tif")
 
 g = st_transform(g, crs = st_crs(r))
-g$stringybark_max = raster::extract(r, g, method = 'simple', fun = max, na.rm = T)
-g$stringybark_min = raster::extract(r, g, method = 'simple', fun = min, na.rm = T)
+l = raster::extract(r, g, method = 'simple')
+g$stringybark.1 = unlist(lapply(l, FUN = function(x) quantile(x, probs = 0.1, na.rm = T)))
+g$stringybark.9 = unlist(lapply(l, FUN = function(x) quantile(x, probs = 0.9, na.rm = T)))
 
 setwd("/glade/scratch/kjfuller/data/chapter3")
 g = st_transform(g, crs = targetcrs)
