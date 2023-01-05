@@ -5,10 +5,9 @@ library(car)
 library(MASS)
 library(UBL)
 
-# setwd("E:/chapter3/GEDI_FESM")
-setwd("/glade/scratch/kjfuller/data/chapter3")
+# setwd("/glade/scratch/kjfuller/data/chapter3")
 thinfun = function(x){
-  # setwd("E:/chapter3/for GAMs")
+  setwd("E:/chapter3/for GAMs")
   g = st_read(paste0("ch3_forGAMs_prefire", x, "_final.gpkg"))
   g = g |>
     filter(fire_reg != 7 & fire_reg != 9)
@@ -17,6 +16,9 @@ thinfun = function(x){
   g$lon = st_coordinates(g)[,1]
   g$lat = st_coordinates(g)[,2]
   st_geometry(g) = NULL
+  
+  # g |> group_by(severity) |> tally()
+  ## well-distributed, all things considered
 
   l = list()
   for(i in c(1:length(unique(g$fire_reg)))){
@@ -36,8 +38,13 @@ thinfun = function(x){
   g$lat = st_coordinates(g)[,2]
   st_geometry(g) = NULL
   
-  g$winddiff = g$aspect - g$maxwd
-  g$winddiff = cos(g$winddiff * pi / 180)
+  g$winddiff.iso = cos((g$aspect - g$maxwd) * pi / 180)
+  g$winddiff.bom = cos((g$aspect - g$winddir) * pi / 180)
+  
+  g$breaks = apply(g |> dplyr::select(firelines, roads), 1, FUN = min, na.rm = T)
+  g$breaks.all2 = apply(g |> dplyr::select(firelines, roads, water2), 1, FUN = min, na.rm = T)
+  g$breaks.all3 = apply(g |> dplyr::select(firelines, roads, water2, water3), 1, FUN = min, na.rm = T)
+  g$breaks.all4 = apply(g |> dplyr::select(firelines, roads, water2, water3, water4), 1, FUN = min, na.rm = T)
   
   g = g %>%
     dplyr::select(
@@ -55,11 +62,13 @@ thinfun = function(x){
                   ribbonbark,
                   LFMC,
                   VPD,
-                  # winddir:windgust,
-                  winddiff,
+                  winddir:windgust,
+                  winddiff.iso,
+                  winddiff.bom,
                   category,
                   aspect,
                   firelines:water4,
+                  breaks:breaks.all4,
                   house.density,
                   lon,
                   lat)
@@ -76,6 +85,7 @@ thinfun = function(x){
       filter(severity != unique(g$severity)[i])
     g2$severity = 0
     g1 = rbind(g1, g2)
+    g1$severity = as.factor(g1$severity)
     
     memory.limit(size=50000)
     smote <- SmoteClassif(severity ~ .,
