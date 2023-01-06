@@ -330,14 +330,12 @@ index$index = c(1:nrow(index))
 g = g |> 
   left_join(index)
 # g = g[1:10,]
+# g = g |>
+#   filter(index == 484)
 
 setwd("/glade/scratch/kjfuller/data")
 # setwd("E:/chapter3/from Michael")
-wind = st_read("wind_direction.gpkg")
-# remove all directions when windspeed == 0; select just the stations for calculating distances
-wind = wind |>
-  filter(windspeed != 0) |> 
-  st_transform(crs = targetcrs)
+wind = st_read("proj_wind_direction.gpkg")
 
 g_buffer = st_buffer(g, dist = 100000)
 
@@ -362,12 +360,11 @@ windfun = function(x){
     g_temp = g |>
       filter(ID %in% g_temp$ID)
     g_center = st_centroid(g_temp)
-    dist = st_distance(g_center, stat_temp)
+    dist = as.data.frame(st_distance(g_temp, stat_temp))
     st_geometry(stat_temp) = NULL
     st_geometry(g_temp) = NULL
     stat_temp = cbind(stat_temp, t(dist))
-    stat_temp[,-1] = lapply(stat_temp |> dplyr::select(-1), as.numeric)
-
+    
     # select wind data based on polygon timeframe
     wind_temp = wind |>
       filter(station %in% stat_temp$station) |>
@@ -412,26 +409,26 @@ windfun = function(x){
     # create distance-based weights and calculate distance-weighted mean and wind impact index
     wind_temp[,c(2:(ncol(wind_temp) - 6))] = as.data.frame(lapply(wind_temp |> 
                                                                     dplyr::select(c(2:(ncol(wind_temp) - 6))), 
-                                                                  function(x) {1 - (x)/100000}))
-    g_temp$winddir = lapply(wind_temp |> 
-                              dplyr::select(c(2:(ncol(wind_temp) - 6))), 
-                            function(x) {weighted.mean(wind_temp[,"winddir"], x, na.rm = T)})
-    g_temp$windspeed = lapply(wind_temp |> 
-                                dplyr::select(c(2:(ncol(wind_temp) - 6))), 
-                              function(x) {weighted.mean(wind_temp[,"windspeed"], x, na.rm = T)})
-    g_temp$windspeed.1 = lapply(wind_temp |> 
-                                  dplyr::select(c(2:(ncol(wind_temp) - 6))), 
-                                function(x) {weighted.mean(wind_temp[,"windspeed.1"], x, na.rm = T)})
-    g_temp$windspeed.9 = lapply(wind_temp |> 
-                                  dplyr::select(c(2:(ncol(wind_temp) - 6))), 
-                                function(x) {weighted.mean(wind_temp[,"windspeed.9"], x, na.rm = T)})
-    g_temp$windgust = lapply(wind_temp |> 
-                               dplyr::select(c(2:(ncol(wind_temp) - 6))), 
-                             function(x) {weighted.mean(wind_temp[,"windgust"], x, na.rm = T)})
-    g_temp$windgust.9 = lapply(wind_temp |> 
-                                 dplyr::select(c(2:(ncol(wind_temp) - 6))), 
-                               function(x) {weighted.mean(wind_temp[,"windgust.9"], x, na.rm = T)})
-
+                                                                  function(x) {1 - (x/100000)}))
+    g_temp$winddir = as.numeric(lapply(wind_temp |> 
+                                         dplyr::select(c(2:(ncol(wind_temp) - 6))), 
+                                       function(x) {weighted.mean(wind_temp[,"winddir"], x, na.rm = T)}))
+    g_temp$windspeed = as.numeric(lapply(wind_temp |> 
+                                           dplyr::select(c(2:(ncol(wind_temp) - 6))), 
+                                         function(x) {weighted.mean(wind_temp[,"windspeed"], x, na.rm = T)}))
+    g_temp$windspeed.1 = as.numeric(lapply(wind_temp |> 
+                                             dplyr::select(c(2:(ncol(wind_temp) - 6))), 
+                                           function(x) {weighted.mean(wind_temp[,"windspeed.1"], x, na.rm = T)}))
+    g_temp$windspeed.9 = as.numeric(lapply(wind_temp |> 
+                                             dplyr::select(c(2:(ncol(wind_temp) - 6))), 
+                                           function(x) {weighted.mean(wind_temp[,"windspeed.9"], x, na.rm = T)}))
+    g_temp$windgust = as.numeric(lapply(wind_temp |> 
+                                          dplyr::select(c(2:(ncol(wind_temp) - 6))), 
+                                        function(x) {weighted.mean(wind_temp[,"windgust"], x, na.rm = T)}))
+    g_temp$windgust.9 = as.numeric(lapply(wind_temp |> 
+                                            dplyr::select(c(2:(ncol(wind_temp) - 6))), 
+                                          function(x) {weighted.mean(wind_temp[,"windgust.9"], x, na.rm = T)}))
+    
     # l[[x]] = g_temp
 
     .GlobalEnv$counter <- .GlobalEnv$counter + 1
@@ -439,16 +436,17 @@ windfun = function(x){
 
   }, error = function(e){print(x); cat("ERROR :", conditionMessage(e), "\n")})
 }
-for(i in c(1:nrow(g))){
+for(i in c(1:length(unique(g_buffer$index)))){
   windfun(i)
   print(i)
 }
 print("binding rows")
 g_temp = bind_rows(l)
+setwd("/glade/scratch/kjfuller/data/chapter3")
+write.csv(g_temp, "ch3_forGAMs_poly_prefire180_wind3.csv", row.names = F)
+
 print("joining to original isochron data")
 g = left_join(g, g_temp)
-
-setwd("/glade/scratch/kjfuller/data/chapter3")
 st_write(g, paste0("ch3_forGAMs_poly_prefire180_wind3.gpkg"), delete_dsn = T)
 
 ## still need to extract: fire type categories (FESM directly) -> not all isochrons align with FESM fires
