@@ -321,23 +321,28 @@ g = g |>
                 poly_sD,
                 poly_eD)
 
-index = g |> 
+index = g |>
   dplyr::select(poly_sD,
                 poly_eD)
 st_geometry(index) = NULL
 index = unique(index)
 index$index = c(1:nrow(index))
-g = g |> 
+g = g |>
   left_join(index)
 # g = g[1:10,]
 # g = g |>
 #   filter(index == 484)
+# g_issue = g |> 
+#   filter(ID %in% issue$ID)
+# g = g |> 
+#   filter(index %in% g_issue$index)
+# g
+
+g_buffer = st_buffer(g, dist = 100000)
 
 setwd("/glade/scratch/kjfuller/data")
 # setwd("E:/chapter3/from Michael")
 wind = st_read("proj_wind_direction.gpkg")
-
-g_buffer = st_buffer(g, dist = 100000)
 
 stations = wind |>
   dplyr::select(station)
@@ -355,6 +360,12 @@ windfun = function(x){
     # select a buffered polygon and index all stations within 100km
     g_temp = g_buffer[g_buffer$index == unique(g_buffer$index)[x],]
     stat_temp = stations[g_temp,]
+    
+    # g_center = g |>
+    #   filter(ID %in% g_temp$ID) |> 
+    #   st_centroid()
+    # tmap_mode("view")
+    # tm_shape(g_temp) + tm_borders() + tm_shape(stat_temp) + tm_dots() + tm_shape(g_center) + tm_dots(col = "blue")
 
     # select the original polygon and calculate distance from centroid to selected stations
     g_temp = g |>
@@ -364,7 +375,7 @@ windfun = function(x){
     st_geometry(stat_temp) = NULL
     st_geometry(g_temp) = NULL
     stat_temp = cbind(stat_temp, t(dist))
-    
+
     # select wind data based on polygon timeframe
     wind_temp = wind |>
       filter(station %in% stat_temp$station) |>
@@ -382,53 +393,49 @@ windfun = function(x){
     # calculate the median wind speed within the polygon timeframe at each selected station, join to station data
     winddir = aggregate(data = wind_temp, winddir ~ station, FUN = function(x) median(x, na.rm = T))
     names(winddir)[2] = "winddir"
-    
+
     windsp1 = aggregate(data = wind_temp, windspeed ~ station, FUN = function(x) median(x, na.rm = T))
     names(windsp1)[2] = "windspeed"
-    
+
     windsp2 = aggregate(data = wind_temp, windspeed ~ station, FUN = function(x) quantile(x, probs = 0.9, na.rm = T))
     names(windsp2)[2] = "windspeed.9"
-    
+
     windsp3 = aggregate(data = wind_temp, windspeed ~ station, FUN = function(x) quantile(x, probs = 0.1, na.rm = T))
     names(windsp3)[2] = "windspeed.1"
-    
+
     windgt1 = aggregate(data = wind_temp, windgust ~ station, FUN = function(x) median(x, na.rm = T))
     names(windgt1)[2] = "windgust"
-    
+
     windgt2 = aggregate(data = wind_temp, windgust ~ station, FUN = function(x) quantile(x, probs = 0.9, na.rm = T))
     names(windgt2)[2] = "windgust.9"
-    
+
     wind_temp = stat_temp |>
-      right_join(winddir) |> 
+      right_join(winddir) |>
       full_join(windsp1) |>
       full_join(windsp2) |>
       full_join(windsp3) |>
       full_join(windgt1) |>
       full_join(windgt2)
     
-    # create distance-based weights and calculate distance-weighted mean and wind impact index
-    wind_temp[,c(2:(ncol(wind_temp) - 6))] = as.data.frame(lapply(wind_temp |> 
-                                                                    dplyr::select(c(2:(ncol(wind_temp) - 6))), 
-                                                                  function(x) {1 - (x/100000)}))
-    g_temp$winddir = as.numeric(lapply(wind_temp |> 
-                                         dplyr::select(c(2:(ncol(wind_temp) - 6))), 
-                                       function(x) {weighted.mean(wind_temp[,"winddir"], x, na.rm = T)}))
-    g_temp$windspeed = as.numeric(lapply(wind_temp |> 
-                                           dplyr::select(c(2:(ncol(wind_temp) - 6))), 
-                                         function(x) {weighted.mean(wind_temp[,"windspeed"], x, na.rm = T)}))
-    g_temp$windspeed.1 = as.numeric(lapply(wind_temp |> 
-                                             dplyr::select(c(2:(ncol(wind_temp) - 6))), 
-                                           function(x) {weighted.mean(wind_temp[,"windspeed.1"], x, na.rm = T)}))
-    g_temp$windspeed.9 = as.numeric(lapply(wind_temp |> 
-                                             dplyr::select(c(2:(ncol(wind_temp) - 6))), 
-                                           function(x) {weighted.mean(wind_temp[,"windspeed.9"], x, na.rm = T)}))
-    g_temp$windgust = as.numeric(lapply(wind_temp |> 
-                                          dplyr::select(c(2:(ncol(wind_temp) - 6))), 
-                                        function(x) {weighted.mean(wind_temp[,"windgust"], x, na.rm = T)}))
-    g_temp$windgust.9 = as.numeric(lapply(wind_temp |> 
-                                            dplyr::select(c(2:(ncol(wind_temp) - 6))), 
-                                          function(x) {weighted.mean(wind_temp[,"windgust.9"], x, na.rm = T)}))
+    weights = wind_temp |> dplyr::select(c(2:(ncol(wind_temp) - 6)))
+    weights[weights > 100000] = 100000
     
+    # create distance-based weights and calculate distance-weighted mean and wind impact index
+    weights = as.data.frame(lapply(weights, function(x) {1 - (x/100000)}))
+    
+    g_temp$winddir = as.numeric(lapply(weights,
+                                       function(x) {weighted.mean(wind_temp[,"winddir"], x, na.rm = T)}))
+    g_temp$windspeed = as.numeric(lapply(weights,
+                                         function(x) {weighted.mean(wind_temp[,"windspeed"], x, na.rm = T)}))
+    g_temp$windspeed.1 = as.numeric(lapply(weights,
+                                           function(x) {weighted.mean(wind_temp[,"windspeed.1"], x, na.rm = T)}))
+    g_temp$windspeed.9 = as.numeric(lapply(weights,
+                                           function(x) {weighted.mean(wind_temp[,"windspeed.9"], x, na.rm = T)}))
+    g_temp$windgust = as.numeric(lapply(weights,
+                                        function(x) {weighted.mean(wind_temp[,"windgust"], x, na.rm = T)}))
+    g_temp$windgust.9 = as.numeric(lapply(weights,
+                                          function(x) {weighted.mean(wind_temp[,"windgust.9"], x, na.rm = T)}))
+
     # l[[x]] = g_temp
 
     .GlobalEnv$counter <- .GlobalEnv$counter + 1
@@ -544,18 +551,18 @@ st_write(g, paste0("ch3_forGAMs_poly_prefire180_wind3.gpkg"), delete_dsn = T)
 #                 VPD.9)
 # summary(g14)
 # 
-# g15 = st_read("ch3_forGAMs_poly_prefire180_wind.gpkg")
-# st_geometry(g15) = NULL
-# summary(g15)
-# g15$wind.stdev[is.na(g15$wind.stdev)] = 0
-# g15 = g15 |>
-#   filter(!is.na(windspeed)) |>
-#   dplyr::select(ID,
-#                 winddir,
-#                 wind.stdev,
-#                 windspeed,
-#                 windgust)
-# summary(g15)
+# # g15 = st_read("ch3_forGAMs_poly_prefire180_wind.gpkg")
+# # st_geometry(g15) = NULL
+# # summary(g15)
+# # g15$wind.stdev[is.na(g15$wind.stdev)] = 0
+# # g15 = g15 |>
+# #   filter(!is.na(windspeed)) |>
+# #   dplyr::select(ID,
+# #                 winddir,
+# #                 wind.stdev,
+# #                 windspeed,
+# #                 windgust)
+# # summary(g15)
 # 
 # g16 = st_read("ch3_forGAMs_poly_prefire180_wind3.gpkg")
 # st_geometry(g16) = NULL
@@ -563,10 +570,15 @@ st_write(g, paste0("ch3_forGAMs_poly_prefire180_wind3.gpkg"), delete_dsn = T)
 # g16 = g16 |>
 #   filter(!is.na(windspeed.9)) |>
 #   dplyr::select(ID,
+#                 winddir,
+#                 windspeed,
 #                 windspeed.1,
 #                 windspeed.9,
+#                 windgust,
 #                 windgust.9)
 # summary(g16)
+# issue = g16[g16$windspeed < 0,]
+# ## checked issue in wind extraction code
 # 
 # g = g1 |>
 #   left_join(g2) |>
@@ -582,15 +594,17 @@ st_write(g, paste0("ch3_forGAMs_poly_prefire180_wind3.gpkg"), delete_dsn = T)
 #   left_join(g12) |>
 #   left_join(g13) |>
 #   left_join(g14) |>
-#   left_join(g15) |>
-#   left_join(g16) |> 
+#   # left_join(g15) |>
+#   left_join(g16) |>
 #   filter(!is.na(fire_reg)) |>
-#   filter(!is.na(LFMC)) |> 
-#   filter(prog < 1000) |> 
+#   filter(!is.na(LFMC)) |>
+#   filter(prog < 1000) |>
 #   filter(fire_reg != 7 & fire_reg != 9)
 # rm(g1, g2, g3,
 #    # g4,
-#    g5, g6, g7, g8, g9, g10, g11, g12, g13, g14, g15, g16)
+#    g5, g6, g7, g8, g9, g10, g11, g12, g13, g14, 
+#    # g15, 
+#    g16)
 # 
 # g$winddiff.bom = cos((g$aspect - g$winddir) * pi / 180)
 # 

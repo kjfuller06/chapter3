@@ -143,6 +143,8 @@ g = g |>
   left_join(index)
 # g = g[1:100,]
 
+g_buffer = st_buffer(g, dist = 100000) ## buffer of radius 100km to select stations
+
 setwd("/glade/scratch/kjfuller/data")
 # setwd("E:/chapter3/from Michael")
 # wind = st_read("wind_direction.gpkg")
@@ -152,8 +154,6 @@ setwd("/glade/scratch/kjfuller/data")
 #   st_transform(crs = targetcrs)
 # st_write(wind, "proj_wind_direction.gpkg", delete_dsn = T)
 wind = st_read("proj_wind_direction.gpkg")
-
-g_buffer = st_buffer(g, dist = 100000) ## buffer of radius 100km to select stations
 
 stations = wind |>
   dplyr::select(station)
@@ -225,28 +225,25 @@ windfun = function(x){
       full_join(windsp3) |>
       full_join(windgt1) |>
       full_join(windgt2)
+    
+    weights = wind_temp |> dplyr::select(c(2:(ncol(wind_temp) - 6)))
+    weights[weights > 100000] = 100000
+    
     # create distance-based weights and calculate distance-weighted mean and wind impact index
-    wind_temp[,c(2:(ncol(wind_temp) - 6))] = as.data.frame(lapply(wind_temp |> 
-                                                                    dplyr::select(c(2:(ncol(wind_temp) - 6))), 
-                                                                  function(x) {1 - (x/100000)}))
-    g_temp$winddir = as.numeric(lapply(wind_temp |> 
-                              dplyr::select(c(2:(ncol(wind_temp) - 6))), 
-                            function(x) {weighted.mean(wind_temp[,"winddir"], x, na.rm = T)}))
-    g_temp$windspeed = as.numeric(lapply(wind_temp |> 
-                                dplyr::select(c(2:(ncol(wind_temp) - 6))), 
-                              function(x) {weighted.mean(wind_temp[,"windspeed"], x, na.rm = T)}))
-    g_temp$windspeed.1 = as.numeric(lapply(wind_temp |> 
-                                  dplyr::select(c(2:(ncol(wind_temp) - 6))), 
-                                function(x) {weighted.mean(wind_temp[,"windspeed.1"], x, na.rm = T)}))
-    g_temp$windspeed.9 = as.numeric(lapply(wind_temp |> 
-                                  dplyr::select(c(2:(ncol(wind_temp) - 6))), 
-                                function(x) {weighted.mean(wind_temp[,"windspeed.9"], x, na.rm = T)}))
-    g_temp$windgust = as.numeric(lapply(wind_temp |> 
-                               dplyr::select(c(2:(ncol(wind_temp) - 6))), 
-                             function(x) {weighted.mean(wind_temp[,"windgust"], x, na.rm = T)}))
-    g_temp$windgust.9 = as.numeric(lapply(wind_temp |> 
-                                 dplyr::select(c(2:(ncol(wind_temp) - 6))), 
-                               function(x) {weighted.mean(wind_temp[,"windgust.9"], x, na.rm = T)}))
+    weights = as.data.frame(lapply(weights, function(x) {1 - (x/100000)}))
+    
+    g_temp$winddir = as.numeric(lapply(weights,
+                                       function(x) {weighted.mean(wind_temp[,"winddir"], x, na.rm = T)}))
+    g_temp$windspeed = as.numeric(lapply(weights,
+                                         function(x) {weighted.mean(wind_temp[,"windspeed"], x, na.rm = T)}))
+    g_temp$windspeed.1 = as.numeric(lapply(weights,
+                                           function(x) {weighted.mean(wind_temp[,"windspeed.1"], x, na.rm = T)}))
+    g_temp$windspeed.9 = as.numeric(lapply(weights,
+                                           function(x) {weighted.mean(wind_temp[,"windspeed.9"], x, na.rm = T)}))
+    g_temp$windgust = as.numeric(lapply(weights,
+                                        function(x) {weighted.mean(wind_temp[,"windgust"], x, na.rm = T)}))
+    g_temp$windgust.9 = as.numeric(lapply(weights,
+                                          function(x) {weighted.mean(wind_temp[,"windgust.9"], x, na.rm = T)}))
     # g_temp$winddir = weighted.mean(wind_temp$winddir, wind_temp$weight)
     # g_temp$windspeed = weighted.mean(wind_temp$windspeed, wind_temp$weight)
     # g_temp$windspeed.1 = weighted.mean(wind_temp$windspeed.1, wind_temp$weight)
@@ -264,7 +261,7 @@ for(i in c(1:length(unique(g_buffer$index)))){
   print(i)
 }
 g_temp = bind_rows(l)
-# setwd("/glade/scratch/kjfuller/data/chapter3")
+setwd("/glade/scratch/kjfuller/data/chapter3")
 # write.csv(g_temp, "ch3_forGAMs_prefire180_wind2.csv", row.names = F)
 
 g = left_join(g, g_temp)
