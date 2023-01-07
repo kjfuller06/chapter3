@@ -4,6 +4,7 @@ library(spThin)
 library(car)
 library(MASS)
 library(UBL)
+memory.limit(size=50000)
 
 # setwd("/glade/scratch/kjfuller/data/chapter3")
 thinfun = function(x){
@@ -16,6 +17,12 @@ thinfun = function(x){
   g$lon = st_coordinates(g)[,1]
   g$lat = st_coordinates(g)[,2]
   st_geometry(g) = NULL
+  
+  g$breaks = apply(g |> dplyr::select(firelines, roads), 1, FUN = min, na.rm = T)
+  # g$breaks.all2 = apply(g |> dplyr::select(firelines, roads, water2), 1, FUN = min, na.rm = T)
+  # g$breaks.all3 = apply(g |> dplyr::select(firelines, roads, water2, water3), 1, FUN = min, na.rm = T)
+  ## breaks, breaks.all2 and breaks.all3 are the same, as are water2 and water3
+  g$breaks.all = apply(g |> dplyr::select(firelines, roads, water2, water3, water4), 1, FUN = min, na.rm = T)
   
   # g |> group_by(severity) |> tally()
   ## well-distributed, all things considered
@@ -31,69 +38,6 @@ thinfun = function(x){
   g = bind_rows(l)
   g = st_as_sf(g, coords = c("lon", "lat"), crs = targetcrs)
   st_write(g, paste0("ch3_forGAMs_prefire", x, "_thinned1.gpkg"), delete_dsn = T)
-  
-  g = st_read(paste0("ch3_forGAMs_prefire", x, "_thinned1.gpkg"))
-  targetcrs = st_crs(g)
-  g$lon = st_coordinates(g)[,1]
-  g$lat = st_coordinates(g)[,2]
-  st_geometry(g) = NULL
-  
-  g$winddiff.iso = cos((g$aspect - g$maxwd) * pi / 180)
-  g$winddiff.bom = cos((g$aspect - g$winddir) * pi / 180)
-  
-  g$breaks = apply(g |> dplyr::select(firelines, roads), 1, FUN = min, na.rm = T)
-  g$breaks.all2 = apply(g |> dplyr::select(firelines, roads, water2), 1, FUN = min, na.rm = T)
-  g$breaks.all3 = apply(g |> dplyr::select(firelines, roads, water2, water3), 1, FUN = min, na.rm = T)
-  g$breaks.all4 = apply(g |> dplyr::select(firelines, roads, water2, water3, water4), 1, FUN = min, na.rm = T)
-  
-  g = g %>%
-    dplyr::select(
-      # shot_number,
-                  # veg,
-                  fire_reg,
-                  rh98:over_cover,
-                  slope,
-                  severity,
-                  maxtemp:maxwd,
-                  ffdi_final,
-                  # ID,
-                  # elevation,
-                  stringybark,
-                  ribbonbark,
-                  LFMC,
-                  VPD,
-                  winddir:windgust,
-                  winddiff.iso,
-                  winddiff.bom,
-                  category,
-                  aspect,
-                  firelines:water4,
-                  breaks:breaks.all4,
-                  house.density,
-                  lon,
-                  lat)
-  g$fire_reg = as.factor(g$fire_reg)
-  g$severity = as.factor(g$severity)
-  g$category = as.factor(g$category)
-  g = na.omit(g)
-  
-  for(i in c(1:length(unique(g$severity)))){
-    g1 = g |> 
-      filter(severity == unique(g$severity)[i])
-    g1$severity = 1
-    g2 = g |> 
-      filter(severity != unique(g$severity)[i])
-    g2$severity = 0
-    g1 = rbind(g1, g2)
-    g1$severity = as.factor(g1$severity)
-    
-    memory.limit(size=50000)
-    smote <- SmoteClassif(severity ~ .,
-                          g1,
-                          dist = "HEOM", C.perc = "balance", k = 3)
-    smote = st_as_sf(smote, coords = c("lon", "lat"), crs = targetcrs)
-    st_write(smote, paste0("ch3_forGAMs_prefire", x, "_smotesev", i, ".gpkg"), delete_dsn = T)
-  }
 }
 
 thinfun(7)
@@ -102,3 +46,81 @@ thinfun(30)
 thinfun(60)
 thinfun(90)
 thinfun(180)
+
+smotefun = function(x){
+  g = st_read(paste0("ch3_forGAMs_prefire", x, "_thinned1.gpkg"))
+  targetcrs = st_crs(g)
+  g$lon = st_coordinates(g)[,1]
+  g$lat = st_coordinates(g)[,2]
+  st_geometry(g) = NULL
+  
+  g = g %>%
+    dplyr::select(severity,
+                  # shot_number,
+                  # ID,
+                  # veg,
+                  fire_reg,
+                  rh98:over_cover,
+                  LFMC,
+                  VPD,
+                  maxtemp:maxwd,
+                  ffdi_final,
+                  ffdi_cat,
+                  winddir:windgust.9,
+                  winddiff.iso,
+                  winddiff.bom,
+                  category,
+                  # elevation,
+                  slope,
+                  stringybark,
+                  ribbonbark,
+                  firelines,
+                  roads,
+                  # water2,
+                  water3,
+                  water4,
+                  breaks,
+                  breaks.all,
+                  house.density,
+                  lon,
+                  lat)
+  g$fire_reg = as.factor(g$fire_reg)
+  g$severity = as.factor(g$severity)
+  g$category = as.factor(g$category)
+  g = na.omit(g)
+  
+  g$ffdi_cat = factor(g$ffdi_cat, levels = c("one",
+                                             "two",
+                                             "three",
+                                             "four"))
+  
+  # g |> group_by(ffdi_cat) |> tally()
+  ## not bad, will be able to resample to balanced
+  smote <- SmoteClassif(ffdi_cat ~ .,
+                        g,
+                        dist = "HEOM", C.perc = "balance", k = 3)
+  
+  for(i in c(1:length(unique(smote$severity)))){
+    g1 = smote |> 
+      filter(severity == unique(smote$severity)[i])
+    g1$severity = 1
+    g2 = smote |> 
+      filter(severity != unique(smote$severity)[i])
+    g2$severity = 0
+    g1 = rbind(g1, g2)
+    g1$severity = as.factor(g1$severity)
+    
+    g1 <- SmoteClassif(severity ~ .,
+                          g1,
+                          dist = "HEOM", C.perc = "balance", k = 3)
+    g1 = st_as_sf(g1, coords = c("lon", "lat"), crs = targetcrs)
+    st_write(g1, paste0("ch3_forGAMs_prefire", x, "_smotesev", i, ".gpkg"), delete_dsn = T)
+  }
+}
+
+smotefun(7)
+smotefun(14)
+smotefun(30)
+smotefun(60)
+smotefun(90)
+smotefun(180)
