@@ -203,6 +203,9 @@ windfun = function(x){
     winddir = aggregate(data = wind_temp, winddir ~ station, FUN = function(x) median(x, na.rm = T))
     names(winddir)[2] = "winddir"
     
+    wind_var = aggregate(data = wind_temp, winddir ~ station, FUN = function(x) sd(x, na.rm = T))
+    names(wind_var)[2] = "wind.stdev"
+    
     windsp1 = aggregate(data = wind_temp, windspeed ~ station, FUN = function(x) median(x, na.rm = T))
     names(windsp1)[2] = "windspeed"
 
@@ -220,13 +223,14 @@ windfun = function(x){
     
     wind_temp = stat_temp |>
       right_join(winddir) |> 
+      full_join(wind_var) |> 
       full_join(windsp1) |>
       full_join(windsp2) |>
       full_join(windsp3) |>
       full_join(windgt1) |>
       full_join(windgt2)
     
-    weights = wind_temp |> dplyr::select(c(2:(ncol(wind_temp) - 6)))
+    weights = wind_temp |> dplyr::select(c(2:(ncol(wind_temp) - 7)))
     weights[weights > 100000] = 100000
     
     # create distance-based weights and calculate distance-weighted mean and wind impact index
@@ -234,6 +238,8 @@ windfun = function(x){
     
     g_temp$winddir = as.numeric(lapply(weights,
                                        function(x) {weighted.mean(wind_temp[,"winddir"], x, na.rm = T)}))
+    g_temp$wind.stdev = as.numeric(lapply(weights,
+                                       function(x) {weighted.mean(wind_temp[,"wind.stdev"], x, na.rm = T)}))
     g_temp$windspeed = as.numeric(lapply(weights,
                                          function(x) {weighted.mean(wind_temp[,"windspeed"], x, na.rm = T)}))
     g_temp$windspeed.1 = as.numeric(lapply(weights,

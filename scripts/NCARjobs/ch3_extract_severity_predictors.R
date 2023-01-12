@@ -585,27 +585,50 @@ g5 = g5 |>
   filter(!is.na(LFMC))
 summary(g5)
 
-g6 = st_read("ch3_forGAMS_prefire180_wind2.gpkg") ## 9 vars and 52,462 rows
+g6 = st_read("ch3_forGAMS_prefire180_wind2.gpkg") ## 12 vars and 52,462 rows
 ## shot and fire IDs, dates, wind data
 st_geometry(g6) = NULL
 g6 = g6 |> 
   dplyr::select(shot_number,
                 ID,
                 winddir,
+                wind.stdev,
                 windspeed,
                 windspeed.1,
                 windspeed.9,
                 windgust,
-                windgust.9)
+                windgust.9) |> 
+  filter(!is.na(winddir)) |> 
+  filter(!is.na(windgust)) |> 
+  filter(!is.na(wind.stdev))
 summary(g6)
+any(g6$windspeed < g6$windspeed.1)
+## FALSE
+any(g6$windspeed > g6$windspeed.9)
+## FALSE
+any(g6$windspeed > g6$windgust)
+## TRUE
+plot(g6$windgust ~ g6$windspeed)
+abline(0, 1)
+g6$windgust[g6$windspeed > g6$windgust] = g6$windspeed[g6$windspeed > g6$windgust]
+plot(g6$windgust ~ g6$windspeed)
+abline(0, 1)
+any(g6$windspeed > g6$windgust)
+## FALSE
+any(g6$windspeed > g6$windgust.9)
+## FALSE
+any(g6$winddir < 0 | g6$winddir > 359)
+## FALSE
 
 all = g3 |>
   left_join(g5) |> 
   left_join(g6) |> 
-  filter(!is.na(windspeed)) |> 
+  filter(!is.na(windgust)) |> 
+  filter(!is.na(wind.stdev)) |> 
   filter(!is.na(LFMC)) |> 
   filter(!is.na(stringybark)) |> 
-  filter(!is.na(ribbonbark))
+  filter(!is.na(ribbonbark)) |> 
+  filter(fire_reg != 7 & fire_reg != 9)
 summary(all)
 
 all$winddiff.iso = cos((all$aspect - all$maxwd) * pi / 180)
@@ -648,9 +671,9 @@ all$ffdi_cat = factor(all$ffdi_cat, levels = c("one",
                                                  "two",
                                                  "three",
                                                  "four"))
-
+summary(all)
 nrow(all)
-## 41,946
+## 41,769
 st_write(all, "ch3_forGAMs_prefire180_final.gpkg", delete_dsn = T)
 
 # prefire 7
@@ -680,7 +703,7 @@ g1 = all |>
   filter(shot_number %in% g1$shot_number)
 
 nrow(g1)
-## 3,460
+## 3,422
 st_write(g1, "ch3_forGAMs_prefire30_final.gpkg", delete_dsn = T)
 
 # prefire 60
@@ -690,7 +713,7 @@ g1 = all |>
   filter(shot_number %in% g1$shot_number)
 
 nrow(g1)
-## 11,276
+## 11,232
 st_write(g1, "ch3_forGAMs_prefire60_final.gpkg", delete_dsn = T)
 
 # prefire 90
@@ -700,5 +723,5 @@ g1 = all |>
   filter(shot_number %in% g1$shot_number)
 
 nrow(g1)
-## 18,442
+## 18,383
 st_write(g1, "ch3_forGAMs_prefire90_final.gpkg", delete_dsn = T)

@@ -3,70 +3,103 @@ library(raster)
 library(tidyverse)
 library(tidymodels)
 library(mgcv)
+library(mgcViz)
+library(DHARMa)
+library(itsadug)
 
 x = 180
-# severity == 1 ####
-sev = 1
-modelnom = paste0("ch3_GAM_severity", sev, "_prefire", x)
+modelnom = paste0("ch3_GAM_severity_prefire", x)
 
 setwd("E:/chapter3/for GAMs")
-g = st_read(paste0("ch3_forGAMs_prefire", x, "_smotesev", sev, ".gpkg"))
+g = st_read(paste0("ch3_forGAMs_prefire", x, "_smotesev.gpkg"))
+## 16.8%, Radj 0.21
+# g = st_read(paste0("trainingdata_prefire", x, "_sev.gpkg"))
+## 12.5%, Radj 0.135
+
 st_geometry(g) = NULL
 g$log_string = log(g$stringybark + 1)
 g$log_ribbon = log(g$ribbonbark + 1)
-g$severity = as.factor(g$severity)
+g$severity[g$severity == 2] = 0
+g$severity[g$severity == 3] = 1
+g$severity[g$severity == 4] = 2
+g$severity[g$severity == 5] = 3
+g$severity = as.numeric(g$severity)
 g$category = as.factor(g$category)
 g$fire_reg = as.factor(g$fire_reg)
 
-sb = g %>%
-  initial_split(strata = severity, prop = 7/10, seed = 5)
-test = testing(sb)
-print("nrow(test) = ")
-print(nrow(test))
-train = training(sb)
-print("nrow(train) = ")
-print(nrow(train))
-rm(sb)
-
 set.seed(5)
-gam1 = bam(severity ~ 
-             fire_reg +
-             s(rh98) +
-             s(over_cover) +
+gam1 = gam(list(severity ~ 
+             # s(rh98) +
              s(cover_z_1) +
-             # s(fhd_normal) +
+             # s(over_cover) +
+             s(fhd_normal) +
              s(slope) +
-             s(maxtemp) +
-             s(maxrh) +
-             # s(maxws) + ## 598
-             # s(ffdi_final) +
-             # ffdi_cat +
              s(stringybark) +
-             # log_string +
              s(ribbonbark) +
-             # log_ribbon +
              s(LFMC) +
              s(VPD) +
-             s(winddiff.iso) + ## 23
-             s(winddiff.bom) +
-             s(windspeed) + ## 1,068
-             # s(windgust) + ## 813
-             # s(windgust, stringybark) +
-             # s(windgust, ribbonbark) +
-             # s(firelines) +
-             # s(roads) +
+             s(winddiff.iso) +
+             # s(windspeed) +
+             # s(windspeed.9) +
+             s(windgust) +
+             # s(windgust.9) +
              s(breaks) +
-             # s(breaks.all2) +
-             # s(breaks.all3) +
-             # s(breaks.all4) +
-             # s(water2),
-             # s(water3),
-             s(water4),
-             # s(house.density, k = 3) +
-             # category,
-           data = train, 
-           family = binomial(link = "logit"),
-           method = "fREML")
+             # s(breaks.all) +
+             s(water3) +
+             # s(water4) +
+             category,
+           ~ # s(rh98) +
+             s(cover_z_1) +
+             # s(over_cover) +
+             s(fhd_normal) +
+             s(slope) +
+             s(stringybark) +
+             s(ribbonbark) +
+             s(LFMC) +
+             s(VPD) +
+             s(winddiff.iso) +
+             # s(windspeed) +
+             # s(windspeed.9) +
+             s(windgust) +
+             # s(windgust.9) +
+             s(breaks) +
+             # s(breaks.all) +
+             s(water3) +
+             # s(water4) +
+             category,
+           ~ # s(rh98) +
+             s(cover_z_1) +
+             # s(over_cover) +
+             s(fhd_normal) +
+             s(slope) +
+             s(stringybark) +
+             s(ribbonbark) +
+             s(LFMC) +
+             s(VPD) +
+             s(winddiff.iso) +
+             # s(windspeed) +
+             # s(windspeed.9) +
+             s(windgust) +
+             # s(windgust.9) +
+             s(breaks) +
+             # s(breaks.all) +
+             s(water3) +
+             # s(water4) +
+             category),
+           data = g, 
+           family = mgcv::multinom(K = 3),
+           method = "REML")
+
+# gam1 = mgcv::gam(list(severity ~
+#                   s(slope),
+#                 ~ 
+#                   s(slope),
+#                 ~ 
+#                   s(slope)),
+#            data = g,
+#            family = mgcv::multinom(K = 3),
+#            method = "REML")
+
 
 summary(gam1)
 anova(gam1)
@@ -80,7 +113,11 @@ plot(gam1, pages = 1,
 
 par(mfrow = c(2, 2))
 gam.check(gam1)
+dev.off()
 k.check(gam1)
+simulationOutput <- simulateResiduals(fittedModel = gam1)
+# plot(simulationOutput, asFactor = T)
+plotResiduals(simulationOutput, train$fire_reg, quantreg = T)
 
 setwd("D:/chapter3/outputs/GAMs")
 capture.output(
@@ -118,15 +155,21 @@ plot(gam1, pages = 1,
 dev.off()
 
 jpeg(paste0(modelnom, "_summedeffectplots.jpeg"), width = 3000, height = 2000, res = 200, units = "px")
-par(mfrow = c(3, 3))
+par(mfrow = c(3, 4))
+p1 = plot_smooth(gam1, view = "rh98", n.grid = 1000)
 p1 = plot_smooth(gam1, view = "cover_z_1", n.grid = 1000)
-p1 = plot_smooth(gam1, view = "elevation_sd", n.grid = 1000)
+p1 = plot_smooth(gam1, view = "fhd_normal", n.grid = 1000)
+p1 = plot_smooth(gam1, view = "over_cover", n.grid = 1000)
+
+p1 = plot_smooth(gam1, view = "slope", n.grid = 1000)
 p1 = plot_smooth(gam1, view = "stringybark", n.grid = 1000)
-p1 = plot_smooth(gam1, view = "ribbonbark.9", n.grid = 1000)
-p1 = plot_smooth(gam1, view = "LFMC.1", n.grid = 1000)
-p1 = plot_smooth(gam1, view = "VPD.9", n.grid = 1000)
-p1 = plot_smooth(gam1, view = "wind.stdev", n.grid = 1000)
-p1 = plot_smooth(gam1, view = "water2", n.grid = 1000)
+p1 = plot_smooth(gam1, view = "ribbonbark", n.grid = 1000)
+p1 = plot_smooth(gam1, view = "LFMC", n.grid = 1000)
+p1 = plot_smooth(gam1, view = "VPD", n.grid = 1000)
+p1 = plot_smooth(gam1, view = "winddiff.bom", n.grid = 1000)
+p1 = plot_smooth(gam1, view = "windgust", n.grid = 1000)
+p1 = plot_smooth(gam1, view = "breaks.all", n.grid = 1000)
+p1 = plot_smooth(gam1, view = "water3", n.grid = 1000)
 dev.off()
 
 vals = data.frame(variable = c("cover_z_1",
@@ -171,3 +214,4 @@ capture.output(
   print("************************** adjusted R^2 ****************************"), print(paste0("test adjR^2 = ", R2adj)),
   file = paste0(modelnom, "modeloutputs.txt"),
   append = T)
+
