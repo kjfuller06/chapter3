@@ -18,9 +18,6 @@ thinfun = function(x){
   g$breaks.all3 = apply(g |> dplyr::select(firelines, roads, water2, water3), 1, FUN = min, na.rm = T)
   g$breaks.all4 = apply(g |> dplyr::select(firelines, roads, water2, water3, water4), 1, FUN = min, na.rm = T)
   
-  g = g |> 
-    filter(prog < 200)
-  
   g = g %>%
     dplyr::select(prog,
                   fire_reg,
@@ -85,15 +82,35 @@ thinfun = function(x){
                                              "three",
                                              "four"))
   
-  # g |> group_by(ffdi_cat) |> tally()
-  C.list = list(one = 1, two = (366/750), three = (366/535), four = 2) 
+  sb = g %>%
+    initial_split(strata = prog, prop = 7/10, seed = 5)
+  test = testing(sb)
+  print("nrow(test) = ")
+  print(nrow(test))
+  write.csv(test, paste0("testingdata_prefire", x, "_iso.csv"), row.names = F)
+  
+  train = training(sb)
+  print("nrow(train) = ")
+  print(nrow(train))
+  write.csv(train, paste0("trainingdata_prefire", x, "_iso.csv"), row.names = F)
+  
+  ns = train |> group_by(ffdi_cat) |> tally()
+  ref = median(ns$n)
+  ## x = 180: 450
+  ## x = 90: 220
+  ## x = 60: 152
+  ## x = 30: 42
+  ## x = 14: 9
+  ## x = 7: 4
+  
+  # calculate the ratio for SMOTE'ing based on the median number of observations in all FFDI categories, with Extreme fires resampled x2
+  C.list = list(one = ref/ns$n[ns$ffdi_cat == "one"], two = ref/ns$n[ns$ffdi_cat == "two"], three = ref/ns$n[ns$ffdi_cat == "three"], four = 2) 
   memory.limit(size=50000)
   smote <- SmoteClassif(ffdi_cat ~ .,
-                        g,
+                        train,
                         dist = "HEOM", C.perc = C.list, k = 3)
-  smote <- SmoteClassif(prog ~ .,
-                        smote,
-                        dist = "HEOM", C.perc = "balance", k = 3)
+  smote |> group_by(ffdi_cat) |> tally()
+  print(nrow(smote))
   write.csv(smote, paste0("ch3_forGAMs_poly_prefire", x, "_smote.csv"), row.names = F)
 }
 
