@@ -7,13 +7,15 @@ library(mgcv)
 library(ggpubr)
 library(tidymodels)
 library(patchwork)
-# library(viridis)
+library(viridis)
 library(RColorBrewer)
 # library(cowplot)
 library(itsadug)
 # library(mgcViz)
 library(metR)
 # library(ggh4x)
+library(tmap)
+library(raster)
 
 x = 180
 modelnom = paste0("ch3_GAM_iso_prefire", x)
@@ -32,7 +34,7 @@ summedallfun = function(b1, config, ymin, ymax, dat, rugdat, lab2, ab2 = ab2){
   if(config == "xy"){
     plot_temp = plot_temp +
       geom_rug(data = rugdat, aes(x = predictor, y = logprog), sides = "b") +
-      ylab("Fire rate of spread (km^2/hr)") +
+      ylab(expression("Fire rate of spread (km"^2*"/hr)")) +
       xlab(lab2) +
       theme_bw() +
       theme(axis.text.y=element_text(size = 12),
@@ -230,7 +232,7 @@ rugdat.temp$predictor = rugdat.temp$predictor*100
 # write.csv(fit, paste0(modelnom, "_cvrz_predictions.csv"), row.names = F)
 fit = read.csv(paste0(modelnom, "_cvrz_predictions.csv"))
 
-g1 = summedallfun(dat = fit, rugdat = rugdat.temp, config = "xy", lab2 = "Understorey cover (%)", 
+g1 = summedallfun(dat = fit, rugdat = rugdat.temp, config = "xy", lab2 = "Median understorey cover (%)", 
                   # ymin = min(fit$ll), ymax = max(fit$ul),
                   ymin = ymin, ymax = ymax,
                   ab2 = max(fit$fit))
@@ -248,7 +250,7 @@ names(rugdat.temp)[2] = "predictor"
 # write.csv(fit, paste0(modelnom, "_elev_predictions.csv"), row.names = F)
 fit = read.csv(paste0(modelnom, "_elev_predictions.csv"))
 
-g2 = summedallfun(dat = fit, rugdat = rugdat.temp, config = "xy", lab2 = "Elevation (m)", 
+g2 = summedallfun(dat = fit, rugdat = rugdat.temp, config = "xy", lab2 = "Standard deviation in elevation (m)", 
                   # ymin = min(fit$ll), ymax = max(fit$ul),
                   ymin = ymin, ymax = 8.75,
                   ab2 = max(fit$fit))
@@ -267,7 +269,7 @@ rugdat.temp$predictor = rugdat.temp$predictor * 100
 # write.csv(fit, paste0(modelnom, "_stringy_predictions.csv"), row.names = F)
 fit = read.csv(paste0(modelnom, "_stringy_predictions.csv"))
 
-g3 = summedallfun(dat = fit, rugdat = rugdat.temp, config = "x", lab2 = "Stringybark probability (%)", 
+g3 = summedallfun(dat = fit, rugdat = rugdat.temp, config = "xy", lab2 = "Median stringybark probability (%)", 
                   # ymin = min(fit$ll), ymax = max(fit$ul),
                   ymin = ymin, ymax = ymax,
                   ab2 = max(fit$fit))
@@ -285,7 +287,7 @@ names(rugdat.temp)[2] = "predictor"
 # write.csv(fit, paste0(modelnom, "_lfmc_predictions.csv"), row.names = F)
 fit = read.csv(paste0(modelnom, "_lfmc_predictions.csv"))
 
-g4 = summedallfun(dat = fit, rugdat = rugdat.temp, config = "x", lab2 = "Live fuel moisture content", 
+g4 = summedallfun(dat = fit, rugdat = rugdat.temp, config = "xy", lab2 = expression("Live fuel moisture content (10"^th*" percentile)"), 
                   # ymin = min(fit$ll), ymax = max(fit$ul),
                   ymin = ymin, ymax = ymax,
                   ab2 = max(fit$fit))
@@ -303,7 +305,7 @@ names(rugdat.temp)[2] = "predictor"
 # write.csv(fit, paste0(modelnom, "_vpd_predictions.csv"), row.names = F)
 fit = read.csv(paste0(modelnom, "_vpd_predictions.csv"))
 
-g5 = summedallfun(dat = fit, rugdat = rugdat.temp, config = "x", lab2 = "Vapour pressure deficit (kPa)", 
+g5 = summedallfun(dat = fit, rugdat = rugdat.temp, config = "xy", lab2 = "Median vapour pressure deficit (kPa)", 
                   # ymin = min(fit$ll), ymax = max(fit$ul),
                   ymin = ymin, ymax = ymax,
                   ab2 = max(fit$fit))
@@ -321,7 +323,7 @@ names(rugdat.temp)[2] = "predictor"
 # write.csv(fit, paste0(modelnom, "_windstdev_predictions.csv"), row.names = F)
 fit = read.csv(paste0(modelnom, "_windstdev_predictions.csv"))
 
-g6 = summedallfun(dat = fit, rugdat = rugdat.temp, config = "x", lab2 = "Standard deviation in wind direction", 
+g6 = summedallfun(dat = fit, rugdat = rugdat.temp, config = "xy", lab2 = "Standard deviation in wind direction (radians)", 
                   # ymin = min(fit$ll), ymax = max(fit$ul),
                   ymin = ymin, ymax = ymax,
                   ab2 = max(fit$fit))
@@ -331,6 +333,7 @@ rugdat.temp = rugdat |>
   dplyr::select(logprog,
                 water2)
 names(rugdat.temp)[2] = "predictor"
+rugdat.temp$predictor = rugdat.temp$predictor/1000
 
 # p1 = plot_smooth(gam1, view = "water2", n.grid = 1000, transform = exp)
 # p1 = p1$fv
@@ -338,16 +341,65 @@ names(rugdat.temp)[2] = "predictor"
 # fit = data.frame(fit = p1$fit, ul = p1$ul, ll = p1$ll, x = p1$water2)
 # write.csv(fit, paste0(modelnom, "_water_predictions.csv"), row.names = F)
 fit = read.csv(paste0(modelnom, "_water_predictions.csv"))
+fit$x = fit$x/1000
 
-g7 = summedallfun(dat = fit, rugdat = rugdat.temp, config = "x", lab2 = "Median distance to water (m)", 
+g7 = summedallfun(dat = fit, rugdat = rugdat.temp, config = "xy", lab2 = "Median distance to water (km)", 
                   # ymin = min(fit$ll), ymax = max(fit$ul),
                   ymin = ymin, ymax = ymax,
                   ab2 = max(fit$fit))
 # plots ####
 # (g2 + g1 + g3)/(g4 | g5 | g6 | g7)
 
+setwd("D:/chapter3/outputs/GAMs")
 plots = 
   (g2 | g1 | g3 | g4 | g5 | g6 | g7) +
   plot_annotation(tag_levels = 'a') & 
   theme(plot.tag = element_text(size = 12))
 ggexport(plots, filename = paste0("GAMiso.jpeg"), width = 7000, height = 1500, res = 250)
+
+ggexport(g1, filename = paste0("understorey.png"), width = 1000, height = 1000, res = 250)
+ggexport(g2, filename = paste0("elevation.png"), width = 1000, height = 1000, res = 250)
+ggexport(g3, filename = paste0("stringybark.png"), width = 1000, height = 1000, res = 250)
+ggexport(g4, filename = paste0("LFMC.png"), width = 1000, height = 1000, res = 250)
+ggexport(g5, filename = paste0("VPD.png"), width = 1000, height = 1000, res = 250)
+ggexport(g6, filename = paste0("wind.stdev.png"), width = 1000, height = 1000, res = 250)
+ggexport(g7, filename = paste0("water.png"), width = 1000, height = 1000, res = 250)
+
+## set zoom to 175%
+g2
+g7
+
+g6
+g5
+
+g4
+g1
+g3
+
+# maps ####
+setwd("D:/chapter1/bark-type-SDM/data")
+nsw = st_read("NSW_sans_islands.shp")
+aus = readRDS("gadm36_AUS_1_sp.rds")
+setwd("E:/chapter3/for GAMs")
+g = st_read(paste0("ch3_forGAMs_poly_prefire", x, "_final.gpkg"))
+setwd("D:/chapter1/other_data/Final/terrain variables")
+# hill2 = raster("proj_dem_hillshade_30m.tif")
+# hill2 = aggregate(hill2, fact = 10)
+# hillproj = projectRaster(hill2, crs = "EPSG:4326")
+# hillproj = mask(hillproj, nsw)
+# writeRaster(hillproj, "hillshadeformapping.tif", overWrite = T)
+hill2 = raster("hillshadeformapping.tif")
+
+tmap_options(check.and.fix = T)
+tmap_mode("plot")
+t1 =
+tm_shape(hillproj) +
+  tm_raster(palette = gray(0:100 / 100), n = 100, legend.show = FALSE) +
+    tm_shape(aus, col = "gray50") +
+    tm_borders() +
+    # tm_shape(nsw) +
+    # tm_borders() +
+  tm_shape(g) + tm_fill(col = "prog", palette = rev(viridis(9)), legend.show = FALSE)
+
+setwd("D:/chapter3/outputs/GAMs")
+tmap_save(t1, "firepolygons.jpg", height = 1000, width = 1000, units = "px")
