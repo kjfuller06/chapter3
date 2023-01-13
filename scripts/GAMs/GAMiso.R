@@ -94,12 +94,12 @@ gam1 = bam(logprog ~
              # s(maxws) +
              # s(ffdi_final, k = 20) + ns
              # ffdi_cat +
-             s(elevation_sd, k = 160) +
+             s(elevation_sd, k = 200) +
              s(stringybark) + ## 60.3
              # s(stringybark.1, k = 320) + ## 60.2
              # s(stringybark.9, k = 320) + ## 59.9
              # log_string +
-             # s(ribbonbark) + ## 60.7 
+             # s(ribbonbark) + ## 60.7
              # s(ribbonbark.1) + ## 61
              # s(ribbonbark.9) + ## 60.9 ns
              # log_ribbon + ## 60.3
@@ -108,12 +108,12 @@ gam1 = bam(logprog ~
              # s(LFMC) + ## 58.5
              # s(VPD.9) + ## 60.1
              # s(VPD.1) + ## 60.5
-             s(VPD, k = 340) + ## 60.3 ## relationship looks better
+             s(VPD, k = 342) + ## 60.3 ## relationship looks better
              # s(winddiff.iso) +
              # s(windspeed) + ## 60.2
              # s(windspeed.1) + ## 60.5
              # s(windspeed.9) + ## 60.1
-             s(wind.stdev) +
+             s(wind.stdev, k = 15) +
              # s(windgust) + ## 60.3
              # s(windgust.9) + ## 60.3 ns
              # s(windgust, stringybark) +
@@ -124,6 +124,7 @@ gam1 = bam(logprog ~
              s(water2, k = 340),
            data = g, 
            method = "fREML")
+aic3 = AIC(logLik.gam(gam1))
 summary(gam1)
 anova(gam1)
 plot(gam1, pages = 1,
@@ -136,9 +137,11 @@ par(mfrow = c(2, 2))
 gam.check(gam1)
 k.check(gam1)
 
+gam1 = readRDS(paste0(modelnom, ".rds"))
+
 setwd("D:/chapter3/outputs/GAMs")
 capture.output(
-  paste0("AIC = ", AICc(gam1)),
+  paste0("AIC = ", AIC(logLik.gam(gam1))),
   file = paste0(modelnom, "modeloutputs.txt"))
 capture.output(
   print("**************************summary****************************"),summary(gam1),
