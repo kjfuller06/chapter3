@@ -211,3 +211,52 @@ st_write(water, "water_restricted10km.gpkg", delete_dsn = T)
 # houses = full_join(house_agg, house_id)
 # houses$house.density = houses$n/houses$area
 # write.csv(houses, "housing_density.csv", row.names = F)
+
+# maps ####
+setwd("E:/chapter3/waterways")
+water = st_read("water.gpkg")
+water1 = water |> 
+  filter(relevance <= 1)
+water2 = water |> 
+  filter(relevance <= 2)
+water3 = water |> 
+  filter(relevance <= 3)
+water4 = water |> 
+  filter(relevance <= 4)
+setwd("D:/chapter1/bark-type-SDM/data")
+nsw = st_read("NSW_sans_islands.shp")
+nsw_buff = st_buffer(nsw, dist = 50000)
+aus = readRDS("gadm36_AUS_1_sp.rds")
+setwd("D:/chapter1/other_data/Final/terrain variables")
+hill2 = raster("hillshadeformapping.tif")
+
+tmap_options(check.and.fix = T)
+tmap_mode("plot")
+t1 =
+tm_shape(aus, bbox = nsw) +
+  tm_fill(col = gray(75/100)) +
+  tm_shape(hill2) +
+  tm_raster(palette = gray(25:100 / 100), n = 100, legend.show = FALSE) +
+  # tm_shape(nsw) +
+  # tm_borders() +
+  tm_shape(water4) + tm_lines(col = mako(10)[6], lwd = 0.25) +
+  tm_shape(water3) + tm_lines(col = mako(10)[6], lwd = 0.75) +
+  tm_shape(water2) + tm_lines(col = mako(10)[6], lwd = 1) +
+  tm_shape(water1) + tm_lines(col = mako(10)[6], lwd = 1.5) +
+  tm_graticules(lines = F)
+t1
+
+setwd("D:/chapter3/outputs/GAMs")
+tmap_save(t1, "water_orders.jpg", height = 3000, width = 3000, units = "px")
+
+t1 =
+  tm_shape(water1, bbox = nsw_buff) + tm_lines(col = mako(10)[6], lwd = 0.5) +
+  tm_add_legend(type = "line", 
+                labels = c("First order", "Second order", "Third order", "Fourth order"),
+                col = mako(10)[6],
+                title = "Significance of\nwater features",
+                lwd = c(0.25, 0.75, 1, 1.5))
+t1
+
+setwd("D:/chapter3/outputs/GAMs")
+tmap_save(t1, "water_legend.jpg", height = 2000, width = 2000, units = "px")
