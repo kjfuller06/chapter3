@@ -379,6 +379,7 @@ g3
 # maps ####
 setwd("D:/chapter1/bark-type-SDM/data")
 nsw = st_read("NSW_sans_islands.shp")
+nsw_buff = st_buffer(nsw, dist = 50000)
 aus = readRDS("gadm36_AUS_1_sp.rds")
 setwd("E:/chapter3/for GAMs")
 g = st_read(paste0("ch3_forGAMs_poly_prefire", x, "_final.gpkg"))
@@ -390,16 +391,28 @@ setwd("D:/chapter1/other_data/Final/terrain variables")
 # writeRaster(hillproj, "hillshadeformapping.tif", overWrite = T)
 hill2 = raster("hillshadeformapping.tif")
 
+bb = st_buffer(g, dist = 50000)
+
 tmap_options(check.and.fix = T)
 tmap_mode("plot")
 t1 =
-tm_shape(hillproj) +
-  tm_raster(palette = gray(0:100 / 100), n = 100, legend.show = FALSE) +
-    tm_shape(aus, col = "gray50") +
-    tm_borders() +
-    # tm_shape(nsw) +
-    # tm_borders() +
-  tm_shape(g) + tm_fill(col = "prog", palette = rev(viridis(9)), legend.show = FALSE)
+  tm_shape(aus, bbox = bb) +
+  tm_fill(col = gray(75/100)) +
+  tm_shape(hill2) +
+  tm_raster(palette = gray(50:100 / 100), n = 100, legend.show = FALSE) +
+  # tm_shape(nsw) +
+  # tm_borders() +
+  tm_shape(g) + tm_fill(col = "prog", palette = turbo(20)[14:20], legend.show = FALSE) +
+  tm_graticules(lines = F) + 
+  tm_layout(inner.margins = 0)
+# t1
 
 setwd("D:/chapter3/outputs/GAMs")
-tmap_save(t1, "firepolygons.jpg", height = 1000, width = 1000, units = "px")
+tmap_save(t1, "firepolygons.jpg", height = 3000, width = 2000, units = "px")
+
+t1 =
+  tm_shape(g) + tm_fill(col = "prog", palette = turbo(20)[14:20])
+t1
+
+setwd("D:/chapter3/outputs/GAMs")
+tmap_save(t1, "polygons_legend.jpg", height = 3000, width = 2000, units = "px")
