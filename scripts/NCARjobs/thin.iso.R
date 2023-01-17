@@ -8,7 +8,8 @@ library(UBL)
 # setwd("/glade/scratch/kjfuller/data/chapter3")
 thinfun = function(x){
   setwd("E:/chapter3/for GAMs")
-  g = st_read(paste0("ch3_forGAMs_poly_prefire", x, "_final.gpkg"))
+  # g = st_read(paste0("ch3_forGAMs_poly_prefire", x, "_final.gpkg"))
+  g = st_read(paste0("ch3_forGAMs_poly_prefire", x, "_final_redo.gpkg"))
   g$fire_reg = as.factor(g$fire_reg)
   targetcrs = st_crs(g)
   st_geometry(g) = NULL
@@ -55,10 +56,12 @@ thinfun = function(x){
                   windspeed,
                   windspeed.1,
                   windspeed.9,
+                  windspeed.stdev,
                   # windspeed_min,
                   # windspeed_max,
                   windgust,
                   windgust.9,
+                  windgust.stdev,
                   # windgust_max,
                   maxtemp,
                   maxrh,
@@ -83,16 +86,18 @@ thinfun = function(x){
                                              "four"))
   
   sb = g %>%
-    initial_split(strata = prog, prop = 7/10, seed = 5)
+    initial_split(strata = prog, prop = 7/10, seed = 10)
   test = testing(sb)
   print("nrow(test) = ")
   print(nrow(test))
-  write.csv(test, paste0("testingdata_prefire", x, "_iso.csv"), row.names = F)
+  # write.csv(test, paste0("testingdata_prefire", x, "_iso.csv"), row.names = F)
+  write.csv(test, paste0("testingdata_prefire", x, "_iso_redo.csv"), row.names = F)
   
   train = training(sb)
   print("nrow(train) = ")
   print(nrow(train))
-  write.csv(train, paste0("trainingdata_prefire", x, "_iso.csv"), row.names = F)
+  # write.csv(train, paste0("trainingdata_prefire", x, "_iso.csv"), row.names = F)
+  write.csv(train, paste0("trainingdata_prefire", x, "_iso_redo.csv"), row.names = F)
   
   ns = train |> group_by(ffdi_cat) |> tally()
   ref = median(ns$n)

@@ -17,67 +17,16 @@ library(MuMIn)
 
 setwd("E:/chapter3/for GAMs")
 x = 180
-modelnom = paste0("ch3_GAM_iso_prefire", x)
+modelnom = paste0("ch3_GAM_iso_prefire", x, "_redo")
 # g = read.csv(paste0("ch3_forGAMs_poly_prefire", x, "_smote.csv"))
-g = read.csv(paste0("trainingdata_prefire", x, "_iso.csv"))
+# g = read.csv(paste0("trainingdata_prefire", x, "_iso.csv"))
+g = read.csv(paste0("trainingdata_prefire", x, "_iso_redo.csv"))
 g$ffdi_cat = as.factor(g$ffdi_cat)
 g$fire_reg = as.factor(g$fire_reg)
 
 g$logprog = log(g$prog)
 
-# best_model = glmulti(sqrt(prog) ~ 
-#                        rh98 +
-#                        cover_z_1 +
-#                        over_cover +
-#                        fhd_normal +
-#                        slope +
-#                        ffdi_final +
-#                        elevation_sd +
-#                        stringybark +
-#                        ribbonbark +
-#                        LFMC +
-#                        wind.stdev +
-#                        winddiff.iso +
-#                        water2 +
-#                        breaks,
-#                      data = train,
-#                      crit = aicc,
-#                      level = 1,
-#                      method = "h",
-#                      fitfunc = lm,
-#                      confsetsize = 100)
-# 
-# summary(best_model)
-# coef(best_model)
-# plot(best_model) ## plot the AICc of the top 100 models
-# print(best_model) ## decent summary output (2 models within 2 dAICc from the best model)
-# weightable(best_model)[1:6,] |> ## pick the top 6 models
-#   regulartable() |> ## beautify tables
-#   autofit()
-# 
-# # best model:
-# lm1 = lm(sqrt(prog) ~ 
-#            over_cover + 
-#            slope +
-#            # maxws + 
-#            ffdi_final + 
-#            ffdi_final:maxws +
-#            elevation_sd + 
-#            # stringybark +
-#            # log_string +
-#            VPD + 
-#            wind.stdev,
-#            # breaks.all3,
-#          data = train)
-# summary(lm1)
-# Anova(lm1, type = 3)
-
-# train = train |> 
-#   filter(VPD < 8) |> 
-#   filter(wind.stdev < 150) |> 
-#   filter(elevation_sd < 300)
-
-set.seed(100)
+set.seed(5)
 gam1 = bam(logprog ~ 
              # fire_reg +
              # s(rh98, by = ffdi_cat) +
@@ -111,9 +60,12 @@ gam1 = bam(logprog ~
              s(VPD, k = 342) + ## 60.3 ## relationship looks better
              # s(winddiff.iso) +
              # s(windspeed) + ## 60.2
-             # s(windspeed.1) + ## 60.5
+             # s(windspeed.1, VPD) + ## 60.5
              # s(windspeed.9) + ## 60.1
              s(wind.stdev, k = 15) +
+             s(windspeed.stdev, k = 15) +
+             # s(windspeed.stdev, wind.stdev, k = 15) +
+             # s(windgust.stdev, k = 15) +
              # s(windgust) + ## 60.3
              # s(windgust.9) + ## 60.3 ns
              # s(windgust, stringybark) +
@@ -124,7 +76,7 @@ gam1 = bam(logprog ~
              s(water2, k = 340),
            data = g, 
            method = "fREML")
-aic3 = AIC(logLik.gam(gam1))
+AIC(logLik.gam(gam1))
 summary(gam1)
 anova(gam1)
 plot(gam1, pages = 1,
@@ -136,10 +88,13 @@ plot(gam1, pages = 1,
 par(mfrow = c(2, 2))
 gam.check(gam1)
 k.check(gam1)
-
-gam1 = readRDS(paste0(modelnom, ".rds"))
+# fvisgam(gam1, view = c("windspeed.1", "VPD"))
+# vis.gam(gam1, view = c("windspeed.stdev", "wind.stdev"), theta = 35, phi = 32, n.grid = 100)
 
 setwd("D:/chapter3/outputs/GAMs")
+# saveRDS(gam1, paste0(modelnom, ".rds"))
+gam1 = readRDS(paste0(modelnom, ".rds"))
+
 capture.output(
   paste0("AIC = ", AIC(logLik.gam(gam1))),
   file = paste0(modelnom, "modeloutputs.txt"))
@@ -182,6 +137,7 @@ p1 = plot_smooth(gam1, view = "stringybark", n.grid = 1000)
 # p1 = plot_smooth(gam1, view = "ribbonbark.9", n.grid = 1000)
 p1 = plot_smooth(gam1, view = "LFMC.1", n.grid = 1000)
 p1 = plot_smooth(gam1, view = "VPD", n.grid = 1000)
+p1 = plot_smooth(gam1, view = "windspeed.stdev", n.grid = 1000)
 p1 = plot_smooth(gam1, view = "wind.stdev", n.grid = 1000)
 p1 = plot_smooth(gam1, view = "water2", n.grid = 1000)
 dev.off()
@@ -192,23 +148,23 @@ vals = data.frame(variable = c("cover_z_1",
                                # "ribbonbark.9",
                                "LFMC.1",
                                "VPD",
+                               "windspeed.stdev",
                                "wind.stdev",
                                "water2"),
-                  median = c(0.39121350646019,
-                             39.4739008012175,
-                             0.673583328723907,
+                  median = c(0.393174082040787,
+                             40.0756214061069,
+                             0.673166632652283,
                              # 0.740256667137146,
-                             67.8054453001101,
-                             3.24551010131836,
-                             45.1852170633562,
-                             8612.2001953125))
+                             68.2061747124511,
+                             3.21147179603577,
+                             4.39758656999135,
+                             45.3209329515632,
+                             8606.6796875))
 write.csv(vals, paste0(modelnom, "_medianvaluesforplotting.csv"), row.names = F)
 
-saveRDS(gam1, paste0(modelnom, ".rds"))
-# gam1 = readRDS(paste0(modelnom, ".rds"))
-
 setwd("E:/chapter3/for GAMs")
-test = read.csv(paste0("testingdata_prefire", x, "_iso.csv"))
+# test = read.csv(paste0("testingdata_prefire", x, "_iso.csv"))
+test = read.csv(paste0("testingdata_prefire", x, "_iso_redo.csv"))
 test$logprog = log(test$prog)
 
 preds<-predict(gam1, type="response", newdata=test,
@@ -231,6 +187,14 @@ R2adj <- 1- ((1 - R2) * (length(test$logprog) - 1)/
 
 capture.output(
   print("************************** adjusted R^2 ****************************"), print(paste0("test adjR^2 = ", R2adj)),
+  file = paste0(modelnom, "modeloutputs.txt"),
+  append = T)
+
+# MAE = sum(abs(df$obs - df$exp)) * (1/250)
+rmse <- exp(sqrt(mean((test$error)^2)))
+
+capture.output(
+  print("************************** RMSE ****************************"), print(paste0("RMSE = ", rmse)),
   file = paste0(modelnom, "modeloutputs.txt"),
   append = T)
 

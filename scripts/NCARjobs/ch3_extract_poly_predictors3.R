@@ -466,6 +466,130 @@ library(rgeos)
 # ## aspect, wind direction done, fire regime types (in order to restrict less representative veg types), number of dwellings, distance to roads and distance to water (take the min of both) done
 # 
 # 
+# # wind quantiles redo redo ####
+# setwd("/glade/scratch/kjfuller/data/chapter3")
+# # setwd("E:/chapter3/for GAMs")
+# g = st_read("ch3_forGAMs_poly_prefire180_final.gpkg")
+# targetcrs = st_crs(g)
+# g = g |>
+#   dplyr::select(ID,
+#                 poly_sD,
+#                 poly_eD)
+# 
+# index = g |>
+#   dplyr::select(poly_sD,
+#                 poly_eD)
+# st_geometry(index) = NULL
+# index = unique(index)
+# index$index = c(1:nrow(index))
+# g = g |>
+#   left_join(index)
+# # g = g[1:10,]
+# # g = g |>
+# #   filter(index == 484)
+# # g_issue = g |>
+# #   filter(ID %in% issue$ID)
+# # g = g |>
+# #   filter(index %in% g_issue$index)
+# # g
+# 
+# g_buffer = st_buffer(g, dist = 100000)
+# 
+# setwd("/glade/scratch/kjfuller/data")
+# # setwd("E:/chapter3/from Michael")
+# wind = st_read("wind_direction.gpkg")
+# wind = st_transform(wind, crs = st_crs(g))
+# 
+# stations = wind |>
+#   dplyr::select(station)
+# stations = stations[!duplicated(stations$station),]
+# st_geometry(wind) = NULL
+# 
+# counter <- 0
+# l <- list(NULL)
+# size <- 1
+# windfun = function(x){
+#   if( .GlobalEnv$counter == .GlobalEnv$size )
+#   {length(.GlobalEnv$l) <- .GlobalEnv$size <- .GlobalEnv$size * 2}
+# 
+#   tryCatch({
+#     # select a buffered polygon and index all stations within 100km
+#     g_temp = g_buffer[g_buffer$index == unique(g_buffer$index)[x],]
+#     stat_temp = stations[g_temp,]
+# 
+#     # g_center = g |>
+#     #   filter(ID %in% g_temp$ID) |>
+#     #   st_centroid()
+#     # tmap_mode("view")
+#     # tm_shape(g_temp) + tm_borders() + tm_shape(stat_temp) + tm_dots() + tm_shape(g_center) + tm_dots(col = "blue")
+# 
+#     # select the original polygon and calculate distance from centroid to selected stations
+#     g_temp = g |>
+#       filter(ID %in% g_temp$ID)
+#     g_center = st_centroid(g_temp)
+#     dist = as.data.frame(st_distance(g_temp, stat_temp))
+#     st_geometry(stat_temp) = NULL
+#     st_geometry(g_temp) = NULL
+#     stat_temp = cbind(stat_temp, t(dist))
+# 
+#     # select wind data based on polygon timeframe
+#     wind_temp = wind |>
+#       filter(station %in% stat_temp$station) |>
+#       left_join(stat_temp)
+#     minT = wind_temp |>
+#       filter(DateTime <= min(g_temp$poly_sD))
+#     minT = max(minT$DateTime, na.rm = T)
+#     maxT = wind_temp |>
+#       filter(DateTime >= max(g_temp$poly_eD))
+#     maxT = min(maxT$DateTime, na.rm = T)
+#     wind_temp = wind_temp |>
+#       filter(DateTime >= minT) |>
+#       filter(DateTime <= maxT)
+# 
+#     # calculate the median wind speed within the polygon timeframe at each selected station, join to station data
+#     windsp1 = aggregate(data = wind_temp, windspeed ~ station, FUN = function(x)  sd(x, na.rm = T))
+#     names(windsp1)[2] = "windspeed.stdev"
+# 
+#     windgt1 = aggregate(data = wind_temp, windgust ~ station, FUN = function(x)  sd(x, na.rm = T))
+#     names(windgt1)[2] = "windgust.stdev"
+# 
+#     wind_temp = stat_temp |>
+#       full_join(windsp1) |>
+#       full_join(windgt1)
+# 
+#     weights = wind_temp |> dplyr::select(c(2:(ncol(wind_temp) - 2)))
+#     weights[weights > 100000] = 100000
+# 
+#     # create distance-based weights and calculate distance-weighted mean and wind impact index
+#     weights = as.data.frame(lapply(weights, function(x) {1 - (x/100000)}))
+#     g_temp$windspeed.stdev = as.numeric(lapply(weights,
+#                                          function(x) {weighted.mean(wind_temp[,"windspeed.stdev"], x, na.rm = T)}))
+#     g_temp$windgust.stdev = as.numeric(lapply(weights,
+#                                         function(x) {weighted.mean(wind_temp[,"windgust.stdev"], x, na.rm = T)}))
+# 
+#     .GlobalEnv$counter <- .GlobalEnv$counter + 1
+#     .GlobalEnv$l[[.GlobalEnv$counter]] <- g_temp
+# 
+#   }, error = function(e){print(x); cat("ERROR :", conditionMessage(e), "\n")})
+# }
+# for(i in c(1:length(unique(g_buffer$index)))){
+#   windfun(i)
+#   print(i)
+# }
+# print("binding rows")
+# g_temp = bind_rows(l)
+# setwd("/glade/scratch/kjfuller/data/chapter3")
+# write.csv(g_temp, "ch3_forGAMs_poly_prefire180_wind4.csv", row.names = F)
+# 
+# print("joining to original isochron data")
+# g = left_join(g, g_temp)
+# st_write(g, paste0("ch3_forGAMs_poly_prefire180_wind4.gpkg"), delete_dsn = T)
+# 
+# ## still need to extract: fire type categories (FESM directly) -> not all isochrons align with FESM fires
+# ## aspect, wind direction done, fire regime types (in order to restrict less representative veg types), number of dwellings, distance to roads and distance to water (take the min of both) done
+# 
+# 
+# 
 # process all outputs ####
 setwd("E:/chapter3/for GAMs")
 g1 = st_read("ch3_forGAMs_poly_prefire180_structure.gpkg")
@@ -600,6 +724,15 @@ any(g16$windspeed > g16$windgust.9)
 ## FALSE
 any(g16$winddir < 0 | g16$winddir > 359)
 
+g17 = st_read("ch3_forGAMs_poly_prefire180_wind4.gpkg")
+st_geometry(g17) = NULL
+summary(g17)
+g17 = g17 |> 
+  filter(!is.na(windgust.stdev))
+# g16 = g16 |> 
+#   inner_join(g17)
+# cor(g16 |> dplyr::select(windspeed.stdev, windgust.stdev, wind.stdev), method = "spearman")
+
 g = g1 |>
   left_join(g2) |>
   left_join(g3) |>
@@ -616,13 +749,15 @@ g = g1 |>
   left_join(g14) |>
   # left_join(g15) |>
   left_join(g16) |>
+  left_join(g17) |> 
   filter(!is.na(fire_reg)) |>
   filter(!is.na(LFMC)) |>
   filter(prog < 200) |>
-  filter(fire_reg != 7 & fire_reg != 9) |> 
+  filter(fire_reg != 7 & fire_reg != 9) |>
   filter(!is.na(windspeed.9)) |>
   filter(!is.na(wind.stdev)) |>
-  filter(!is.na(ribbonbark)) |> 
+  filter(!is.na(windgust.stdev)) |> 
+  filter(!is.na(ribbonbark)) |>
   filter(!is.na(stringybark))
 summary(g)
 rm(g1, g2, g3,
@@ -666,6 +801,7 @@ nrow(gref)
 ## 1,708
 setwd("E:/chapter3/for GAMs")
 st_write(gref, "ch3_forGAMs_poly_prefire180_final.gpkg", delete_dsn = T)
+st_write(gref, "ch3_forGAMs_poly_prefire180_final_redo.gpkg", delete_dsn = T)
 
 # prefire 90 ####
 setwd("E:/chapter3/GEDI_FESM")
