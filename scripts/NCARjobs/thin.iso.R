@@ -1,5 +1,6 @@
 library(sf)
 library(tidyverse)
+library(tidymodels)
 library(spThin)
 library(car)
 library(MASS)
@@ -10,6 +11,7 @@ thinfun = function(x){
   setwd("E:/chapter3/for GAMs")
   # g = st_read(paste0("ch3_forGAMs_poly_prefire", x, "_final.gpkg"))
   g = st_read(paste0("ch3_forGAMs_poly_prefire", x, "_final_redo.gpkg"))
+  g = g |> filter(fire_reg < 16)
   g$fire_reg = as.factor(g$fire_reg)
   targetcrs = st_crs(g)
   st_geometry(g) = NULL
@@ -52,7 +54,7 @@ thinfun = function(x){
                   # VPD_min,
                   # VPD_max,
                   winddir,
-                  wind.stdev,
+                  winddir.stdev,
                   windspeed,
                   windspeed.1,
                   windspeed.9,
@@ -76,8 +78,7 @@ thinfun = function(x){
                   breaks,
                   breaks.all2,
                   breaks.all3,
-                  breaks.all4,
-                  house.density)
+                  breaks.all4)
   g$fire_reg = as.factor(g$fire_reg)
   g = na.omit(g)
   g$ffdi_cat = factor(g$ffdi_cat, levels = c("one",
@@ -86,7 +87,7 @@ thinfun = function(x){
                                              "four"))
   
   sb = g %>%
-    initial_split(strata = prog, prop = 7/10, seed = 10)
+    initial_split(strata = prog, prop = 7/10, seed = 5)
   test = testing(sb)
   print("nrow(test) = ")
   print(nrow(test))
