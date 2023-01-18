@@ -14,6 +14,7 @@ library(glmulti)
 library(flextable)
 library(car)
 library(MuMIn)
+library(metR)
 
 setwd("E:/chapter3/for GAMs")
 x = 180
@@ -22,61 +23,52 @@ modelnom = paste0("ch3_GAM_iso_prefire", x, "_redo")
 # g = read.csv(paste0("trainingdata_prefire", x, "_iso.csv"))
 g = read.csv(paste0("trainingdata_prefire", x, "_iso_redo.csv"))
 g$ffdi_cat = as.factor(g$ffdi_cat)
-g$fire_reg = as.factor(g$fire_reg)
 
+ggplot(g, aes(x = cover_z_1, y = LFMC.1)) +
+  geom_density_2d() +
+  facet_wrap(facets = "fire_reg")
+
+ggplot(g, aes(x = stringybark, y = elevation_sd)) +
+  geom_density_2d() +
+  facet_wrap(facets = "fire_reg")
+
+g$fire_reg = as.factor(g$fire_reg)
 g$logprog = log(g$prog)
 
 set.seed(5)
 gam1 = bam(logprog ~ 
-             # fire_reg +
-             # s(rh98, by = ffdi_cat) +
-             # s(cover_z_1, by = ffdi_cat) +
-             # s(over_cover, by = ffdi_cat) +
-             # s(fhd_normal, by = ffdi_cat) +
-             # s(rh98) + ## 59.7
-             # s(over_cover) + ## 59.7
-             s(cover_z_1, k = 3) + ## 60.1
-             # s(cover_ratio) +
-             # s(fhd_normal) + ## 59.4
-             # s(maxtemp) +
-             # s(maxrh) +
-             # s(maxws) +
-             # s(ffdi_final, k = 20) + ns
-             # ffdi_cat +
+             # fire_reg + 
+             # s(rh98) + 
+             # s(over_cover) + 
+             s(cover_z_1, k = 3) + 
+             # s(cover, k = 3) + 
+             # s(fhd_normal) + 
              s(elevation_sd, k = 200) +
-             s(stringybark) + ## 60.3
-             # s(stringybark.1, k = 320) + ## 60.2
-             # s(stringybark.9, k = 320) + ## 59.9
-             # log_string +
-             # s(ribbonbark) + ## 60.7
-             # s(ribbonbark.1) + ## 61
-             # s(ribbonbark.9) + ## 60.9 ns
-             # log_ribbon + ## 60.3
-             s(LFMC.1, k = 80) + ## 60.1
-             # s(LFMC.9) + ## 58.7
-             # s(LFMC) + ## 58.5
-             # s(VPD.9) + ## 60.1
-             # s(VPD.1) + ## 60.5
-             s(VPD, k = 342) + ## 60.3 ## relationship looks better
-             # s(winddiff.iso) +
-             # s(windspeed) + ## 60.2
-             # s(windspeed.1, VPD) + ## 60.5
-             # s(windspeed.9) + ## 60.1
-             s(wind.stdev, k = 15) +
-             s(windspeed.stdev, k = 15) +
-             # s(windspeed.stdev, wind.stdev, k = 15) +
-             # s(windgust.stdev, k = 15) +
-             # s(windgust) + ## 60.3
-             # s(windgust.9) + ## 60.3 ns
-             # s(windgust, stringybark) +
-             # s(windgust, ribbonbark.9) +
-             # s(breaks) +
-             # s(breaks.all4),
-             # s(house.density) +
+             s(stringybark) + 
+             # s(stringybark.1) +
+             # s(stringybark.9) +
+             # s(ribbonbark) +
+             # s(ribbonbark.1) + 
+             # s(ribbonbark.9) +
+             s(LFMC.1, k = 80) +
+             # s(LFMC.9) +
+             # s(LFMC) +
+             # s(VPD.9) +
+             # s(VPD.1) + 
+             s(VPD, k = 342) +  
+             s(winddir.stdev, k = 15) +
+             s(windspeed.stdev, k = 15) + 
+             # s(windspeed) + 
+             # s(windspeed.1) + 
+             # s(windspeed.9) + 
+             # s(windgust.stdev, k = 15) + 
+             # s(windgust) +
+             # s(windgust.9) + 
              s(water2, k = 340),
            data = g, 
            method = "fREML")
 AIC(logLik.gam(gam1))
+
 summary(gam1)
 anova(gam1)
 plot(gam1, pages = 1,
@@ -88,11 +80,11 @@ plot(gam1, pages = 1,
 par(mfrow = c(2, 2))
 gam.check(gam1)
 k.check(gam1)
-# fvisgam(gam1, view = c("windspeed.1", "VPD"))
+# fvisgam(gam1, view = c("cover_z_1", "LFMC.1"))
 # vis.gam(gam1, view = c("windspeed.stdev", "wind.stdev"), theta = 35, phi = 32, n.grid = 100)
 
 setwd("D:/chapter3/outputs/GAMs")
-# saveRDS(gam1, paste0(modelnom, ".rds"))
+saveRDS(gam1, paste0(modelnom, ".rds"))
 gam1 = readRDS(paste0(modelnom, ".rds"))
 
 capture.output(
@@ -129,37 +121,34 @@ plot(gam1, pages = 1,
      shift = coef(gam1)[1])
 dev.off()
 
-jpeg(paste0(modelnom, "_summedeffectplots.jpeg"), width = 3000, height = 2000, res = 200, units = "px")
+jpeg(paste0(modelnom, "_summedeffectplots.jpeg"), width = 3000, height = 3000, res = 200, units = "px")
 par(mfrow = c(3, 3))
-p1 = plot_smooth(gam1, view = "cover_z_1", n.grid = 1000)
-p1 = plot_smooth(gam1, view = "elevation_sd", n.grid = 1000)
-p1 = plot_smooth(gam1, view = "stringybark", n.grid = 1000)
-# p1 = plot_smooth(gam1, view = "ribbonbark.9", n.grid = 1000)
-p1 = plot_smooth(gam1, view = "LFMC.1", n.grid = 1000)
-p1 = plot_smooth(gam1, view = "VPD", n.grid = 1000)
-p1 = plot_smooth(gam1, view = "windspeed.stdev", n.grid = 1000)
-p1 = plot_smooth(gam1, view = "wind.stdev", n.grid = 1000)
-p1 = plot_smooth(gam1, view = "water2", n.grid = 1000)
+p1 = plot_smooth(gam1, view = "cover_z_1", n.grid = 1000, transform = exp)
+p1 = plot_smooth(gam1, view = "elevation_sd", n.grid = 1000, transform = exp)
+p1 = plot_smooth(gam1, view = "stringybark", n.grid = 1000, transform = exp)
+p1 = plot_smooth(gam1, view = "LFMC.1", n.grid = 1000, transform = exp)
+p1 = plot_smooth(gam1, view = "VPD", n.grid = 1000, transform = exp)
+p1 = plot_smooth(gam1, view = "winddir.stdev", n.grid = 1000, transform = exp)
+p1 = plot_smooth(gam1, view = "windspeed.stdev", n.grid = 1000, transform = exp)
+p1 = plot_smooth(gam1, view = "water2", n.grid = 1000, transform = exp)
 dev.off()
 
 vals = data.frame(variable = c("cover_z_1",
                                "elevation_sd",
                                "stringybark",
-                               # "ribbonbark.9",
                                "LFMC.1",
                                "VPD",
+                               "winddir.stdev",
                                "windspeed.stdev",
-                               "wind.stdev",
                                "water2"),
-                  median = c(0.393174082040787,
-                             40.0756214061069,
-                             0.673166632652283,
-                             # 0.740256667137146,
-                             68.2061747124511,
-                             3.21147179603577,
-                             4.39758656999135,
-                             45.3209329515632,
-                             8606.6796875))
+                  median = c(0.394663512706757,
+                             40.6508745071107,
+                             0.673750013113022,
+                             68.7860080404862,
+                             3.21212732791901,
+                             43.8821637351754,
+                             4.34749883984023,
+                             8700))
 write.csv(vals, paste0(modelnom, "_medianvaluesforplotting.csv"), row.names = F)
 
 setwd("E:/chapter3/for GAMs")
@@ -175,6 +164,7 @@ test$pred.se = preds$se.fit
 
 test$error = test$prediction - test$logprog
 R2 = 1 - (sum((test$logprog - test$prediction)^2)/sum((test$logprog - mean(test$logprog))^2))
+R2
 
 setwd("D:/chapter3/outputs/GAMs")
 capture.output(
