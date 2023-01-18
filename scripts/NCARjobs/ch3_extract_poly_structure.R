@@ -19,6 +19,7 @@ gedi = gedi |>
   dplyr::select(shot_number,
                 ID,
                 rh98,
+                cover,
                 cover_z_1,
                 over_cover,
                 fhd_normal)
@@ -37,16 +38,18 @@ g_agg = g |>
   inner_join(gedi)
 # calculate the median of continuous variables
 g_agg1 = aggregate(data = g_agg, rh98 ~ ID, FUN = median)
-g_agg2 = aggregate(data = g_agg, cover_z_1 ~ ID, FUN = median)
-g_agg3 = aggregate(data = g_agg, over_cover ~ ID, FUN = median)
-g_agg4 = aggregate(data = g_agg, fhd_normal ~ ID, FUN = median)
+g_agg2 = aggregate(data = g_agg, cover ~ ID, FUN = median)
+g_agg3 = aggregate(data = g_agg, cover_z_1 ~ ID, FUN = median)
+g_agg4 = aggregate(data = g_agg, over_cover ~ ID, FUN = median)
+g_agg5 = aggregate(data = g_agg, fhd_normal ~ ID, FUN = median)
 
 print("joining all median values of GEDI structure to isochron data")
 g = g |> 
   right_join(g_agg1) |> 
   right_join(g_agg2) |> 
   right_join(g_agg3) |> 
-  right_join(g_agg4)
+  right_join(g_agg4) |> 
+  right_join(g_agg5)
 
 setwd("/glade/scratch/kjfuller/data/chapter3")
 g = st_transform(g, crs = targetcrs)
