@@ -681,14 +681,14 @@ g10 = st_read("ch3_forGAMs_poly_prefire180_water4.gpkg")
 st_geometry(g10) = NULL
 summary(g10)
 
-g11 = st_read("ch3_forGAMs_poly_prefire180_bark1.2.gpkg")
+g11 = st_read("ch3_forGAMs_poly_prefire180_bark1.2_redo.gpkg")
 st_geometry(g11) = NULL
 summary(g11)
 g11 = g11 |>
   filter(!is.na(stringybark))
 summary(g11)
 
-g12 = st_read("ch3_forGAMs_poly_prefire180_bark2.2.gpkg")
+g12 = st_read("ch3_forGAMs_poly_prefire180_bark2.2_redo.gpkg")
 st_geometry(g12) = NULL
 g12 = g12 |>
   filter(!is.na(ribbonbark))
@@ -832,7 +832,7 @@ nrow(gref)
 ## 1,696
 setwd("E:/chapter3/for GAMs")
 # st_write(gref, "ch3_forGAMs_poly_prefire180_final.gpkg", delete_dsn = T)
-st_write(gref, "ch3_forGAMs_poly_prefire180_final_redo.gpkg", delete_dsn = T)
+st_write(gref, "ch3_forGAMs_poly_prefire180_final_redo_1-27.gpkg", delete_dsn = T)
 
 # prefire 90 ####
 setwd("E:/chapter3/GEDI_FESM")
