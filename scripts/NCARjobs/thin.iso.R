@@ -10,7 +10,7 @@ library(UBL)
 thinfun = function(x){
   setwd("E:/chapter3/for GAMs")
   # g = st_read(paste0("ch3_forGAMs_poly_prefire", x, "_final.gpkg"))
-  g = st_read(paste0("ch3_forGAMs_poly_prefire", x, "_final_redo.gpkg"))
+  g = st_read(paste0("ch3_forGAMs_poly_prefire", x, "_final_redo_1-27.gpkg"))
   g = g |> filter(fire_reg < 16)
   g$fire_reg = as.factor(g$fire_reg)
   targetcrs = st_crs(g)
@@ -92,13 +92,13 @@ thinfun = function(x){
   print("nrow(test) = ")
   print(nrow(test))
   # write.csv(test, paste0("testingdata_prefire", x, "_iso.csv"), row.names = F)
-  write.csv(test, paste0("testingdata_prefire", x, "_iso_redo.csv"), row.names = F)
+  write.csv(test, paste0("testingdata_prefire", x, "_iso_redo_1-27.csv"), row.names = F)
   
   train = training(sb)
   print("nrow(train) = ")
   print(nrow(train))
   # write.csv(train, paste0("trainingdata_prefire", x, "_iso.csv"), row.names = F)
-  write.csv(train, paste0("trainingdata_prefire", x, "_iso_redo.csv"), row.names = F)
+  write.csv(train, paste0("trainingdata_prefire", x, "_iso_redo_1-27.csv"), row.names = F)
   
   ns = train |> group_by(ffdi_cat) |> tally()
   ref = median(ns$n)
@@ -117,7 +117,7 @@ thinfun = function(x){
                         dist = "HEOM", C.perc = C.list, k = 3)
   smote |> group_by(ffdi_cat) |> tally()
   print(nrow(smote))
-  write.csv(smote, paste0("ch3_forGAMs_poly_prefire", x, "_smote.csv"), row.names = F)
+  write.csv(smote, paste0("ch3_forGAMs_poly_prefire", x, "_smote_1-27.csv"), row.names = F)
 }
 
 # thinfun(7) ## "low" is absent from dataset
