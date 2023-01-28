@@ -21,19 +21,31 @@ x = 180
 modelnom = paste0("ch3_GAM_iso_prefire", x, "_redo")
 # g = read.csv(paste0("ch3_forGAMs_poly_prefire", x, "_smote.csv"))
 # g = read.csv(paste0("trainingdata_prefire", x, "_iso.csv"))
-g = read.csv(paste0("trainingdata_prefire", x, "_iso_redo.csv"))
+g = read.csv(paste0("trainingdata_prefire", x, "_iso_redo_1-27.csv"))
 g$ffdi_cat = as.factor(g$ffdi_cat)
-
-ggplot(g, aes(x = cover_z_1, y = LFMC.1)) +
-  geom_density_2d() +
-  facet_wrap(facets = "fire_reg")
-
-ggplot(g, aes(x = stringybark, y = elevation_sd)) +
-  geom_density_2d() +
-  facet_wrap(facets = "fire_reg")
-
 g$fire_reg = as.factor(g$fire_reg)
 g$logprog = log(g$prog)
+g$stringybark = as.factor(g$stringybark)
+g$stringybark[g$stringybark == 0.5] = 1
+
+g$stringybark.1[g$stringybark.1 < 0.5] = 0
+g$stringybark.1[g$stringybark.1 >= 0.5] = 1
+g$stringybark.1 = as.factor(g$stringybark.1)
+
+g$stringybark.9[g$stringybark.9 < 0.5] = 0
+g$stringybark.9[g$stringybark.9 >= 0.5] = 1
+g$stringybark.9 = as.factor(g$stringybark.9)
+
+g$ribbonbark = as.factor(g$ribbonbark)
+g$ribbonbark[g$ribbonbark == 0.5] = 1
+
+g$ribbonbark.1[g$ribbonbark.1 < 0.5] = 0
+g$ribbonbark.1[g$ribbonbark.1 >= 0.5] = 1
+g$ribbonbark.1 = as.factor(g$ribbonbark.1)
+
+g$ribbonbark.9[g$ribbonbark.9 < 0.5] = 0
+g$ribbonbark.9[g$ribbonbark.9 >= 0.5] = 1
+g$ribbonbark.9 = as.factor(g$ribbonbark.9)
 
 set.seed(5)
 gam1 = bam(logprog ~ 
@@ -44,12 +56,12 @@ gam1 = bam(logprog ~
              # s(cover, k = 3) + 
              # s(fhd_normal) + 
              s(elevation_sd, k = 200) +
-             s(stringybark) + 
-             # s(stringybark.1) +
-             # s(stringybark.9) +
-             # s(ribbonbark) +
-             # s(ribbonbark.1) + 
-             # s(ribbonbark.9) +
+             # stringybark + ## 4,093.758 as only
+             # stringybark.1 + ## 4,110.637 as only
+             # stringybark.9 + ## 4,114.606 as only
+             # ribbonbark + ## 4,128.259 as only
+             ribbonbark.1 +
+             # ribbonbark.9 +
              s(LFMC.1, k = 80) +
              # s(LFMC.9) +
              # s(LFMC) +
