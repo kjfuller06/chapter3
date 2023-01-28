@@ -37,8 +37,7 @@ summedallfun = function(b1, config, ymin, ymax, dat, rugdat, lab2, ab2 = ab2){
       ylab(expression("Fire rate of progression (km"^2*"/hr)")) +
       xlab(lab2) +
       theme_bw() +
-      theme(axis.text.y=element_text(size = 12),
-            axis.text.x=element_text(size = 12)) +
+      theme(text = element_text(size = 20)) +
       theme(plot.margin = unit(c(0.1,0.1,0,0), "cm"))
     print("config xy")
   } else if(config == "y"){
@@ -46,7 +45,7 @@ summedallfun = function(b1, config, ymin, ymax, dat, rugdat, lab2, ab2 = ab2){
       ylab(expression("Fire rate of progression (km"^2*"/hr)")) +
       xlab("") +
       theme_bw() +
-      theme(axis.text.y=element_text(size = 12),
+      theme(text = element_text(size = 20),
             axis.ticks.x=element_blank(),
             axis.text.x=element_blank(),
             axis.title.x = 
@@ -63,7 +62,7 @@ summedallfun = function(b1, config, ymin, ymax, dat, rugdat, lab2, ab2 = ab2){
       theme_bw() +
       theme(axis.ticks.y=element_blank(),
             axis.text.y=element_blank(),
-            axis.text.x=element_text(size = 12),
+            text = element_text(size = 20),
             axis.title.y = 
               element_text(margin = 
                              ggplot2::margin( 
@@ -76,8 +75,7 @@ summedallfun = function(b1, config, ymin, ymax, dat, rugdat, lab2, ab2 = ab2){
       ylab("") +
       xlab(lab2) +
       theme_bw() +
-      theme(axis.text.y=element_text(size = 12),
-            axis.text.x=element_text(size = 12)) +
+      theme(text = element_text(size = 20)) +
       theme(plot.margin = unit(c(0.1,0.1,0,-0.4), "cm"))
     print("config x")
   } else if(grepl("basic", config) == TRUE){
@@ -123,8 +121,8 @@ setwd("D:/chapter3/outputs/GAMs")
 gam1 = readRDS(paste0(modelnom, ".rds"))
 rugdat = gam1$model
 
-ymin = -1.82
-ymax = 0.8
+ymin = 0
+ymax = 0.85
 rugdat.temp = "temp"
 # cover_z_1 ####
 rugdat.temp = rugdat |>
@@ -161,7 +159,7 @@ fit = read.csv(paste0(modelnom, "_elev_predictions_1-27.csv"))
 
 g2 = summedallfun(dat = fit, rugdat = rugdat.temp, config = "xy", lab2 = "Standard deviation in elevation (m)", 
                   # ymin = min(fit$ll), ymax = max(fit$ul),
-                  ymin = ymin, ymax = 13,
+                  ymin = ymin, ymax = 6.2,
                   ab2 = max(fit$fit))
 
 # stringybark ####
@@ -212,7 +210,7 @@ g3 =
   theme(legend.position = "none",
         axis.ticks.y=element_blank(),
         axis.text.y=element_blank(),
-        axis.text.x=element_text(size = 12),
+        text = element_text(size = 20),
         axis.title.y = 
           element_text(margin = 
                          ggplot2::margin( 
@@ -337,7 +335,7 @@ g9 = summedallfun(dat = fit, rugdat = rugdat.temp, config = "xymin", lab2 = "Med
 
 setwd("D:/chapter3/outputs/GAMs")
 plots = 
-  (plot_grid(g2, g9, g7, g8, g5, g4, g1, g3, align = "hv", axis = "tblr")) +
+  (plot_grid(g2, g9, g8, g7, g5, g4, g1, g3, align = "hv", axis = "tblr")) +
   plot_annotation(tag_levels = 'a') & 
   theme(plot.tag = element_text(size = 12))
 ggexport(plots, filename = paste0("GAMiso_redo_1-27.jpeg"), width = 3000, height = 3000, res = 250)
@@ -353,11 +351,13 @@ ggexport(g8, filename = paste0("winddir.stdev_redo_1-27.png"), width = 1000, hei
 ggexport(g9, filename = paste0("water_redo_1-27.png"), width = 1000, height = 1000, res = 250)
 
 ## set zoom to 100%
+(g2 | g9)/(g8 |g7|g5)/(g4|g1|g3)
+
 g2
 g9
 
-g7
 g8
+g7
 g5
 
 g4
