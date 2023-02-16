@@ -6,25 +6,27 @@ library(rjson)
 library(rgeos)
 library(terra)
 library(FNN)
+library(tmap)
+library(viridis)
 
 # process isochrons ####
-setwd("/glade/scratch/kjfuller/data")
-setwd("E:/chapter3/isochrons/Progall_ffdi_v3")
-g = st_read("progall_ffdi_v3.shp")
-targetcrs = st_crs(g)
-g$ID = c(1:nrow(g))
-g$poly_sD = as.POSIXct(g$lasttim, format = "%Y-%m-%d %H:%M")
-g$poly_eD = as.POSIXct(g$time, format = "%Y-%m-%d %H:%M")
-g$progtime = difftime(g$poly_eD, g$poly_sD, units = "hours")
-g$progtime = as.numeric(g$progtime)
-# filter polygons
-g = g |>
-  filter(progtime > 0) |>
-  filter(progtime <= 192) ## progression time < 8 days (8 * 24 = 192)
-g = g |>
-  dplyr::select(ID, poly_sD, poly_eD, progtime)
-setwd("E:/chapter3/isochrons")
-st_write(g, "isochrons_8days.gpkg", delete_dsn = T)
+# setwd("/glade/scratch/kjfuller/data")
+# setwd("E:/chapter3/isochrons/Progall_ffdi_v3")
+# g = st_read("progall_ffdi_v3.shp")
+# targetcrs = st_crs(g)
+# g$ID = c(1:nrow(g))
+# g$poly_sD = as.POSIXct(g$lasttim, format = "%Y-%m-%d %H:%M")
+# g$poly_eD = as.POSIXct(g$time, format = "%Y-%m-%d %H:%M")
+# g$progtime = difftime(g$poly_eD, g$poly_sD, units = "hours")
+# g$progtime = as.numeric(g$progtime)
+# # filter polygons
+# g = g |>
+#   filter(progtime > 0) |>
+#   filter(progtime <= 192) ## progression time < 8 days (8 * 24 = 192)
+# g = g |>
+#   dplyr::select(ID, poly_sD, poly_eD, progtime)
+# setwd("E:/chapter3/isochrons")
+# st_write(g, "isochrons_8days.gpkg", delete_dsn = T)
 
 # # firelines ####
 # setwd("E:/chapter3/isochrons")
@@ -83,28 +85,28 @@ st_write(g, "isochrons_8days.gpkg", delete_dsn = T)
 # roads = roads[iso_ext,]
 # st_write(roads, "roads_restricted10km.gpkg", delete_dsn = T)
 
-setwd("E:/chapter3/roadways/")
-roads = geojson_sf("RoadNameExtent_EPSG4326_edit.json")
-roads$startdate = as.POSIXct(substr(roads$startdate, 1, 8), format = "%Y%m%d")
-roads = roads |>
-  filter(startdate < "2020-03-02") |>
-  filter(functionhierarchy != 9 & functionhierarchy != 8) |> 
-  filter(operationalstatus == 1) |> 
-  filter(relevance == 1)
-## not a walking path, not unimproved road (which includes driveways)
-## operational
-## cut out non-significant roadways
-roads$startdate[roads$startdate < "2019-08-01"] = "2019-08-01"
-roads = st_zm(roads, drop = TRUE, what = "ZM")
-roads = st_transform(roads, crs = targetcrs)
-st_write(roads, "roads.gpkg", delete_dsn = T)
-
-# to start, remove all features which are not within 10km of any fire
-# iso_ext = st_as_sf(as.polygons(ext(iso)))
-# st_crs(iso_ext) = targetcrs
-# iso_ext = st_buffer(iso_ext, dist = 10000)
-roads = roads[iso_ext,]
-st_write(roads, "roads_restricted10km.gpkg", delete_dsn = T)
+# setwd("E:/chapter3/roadways/")
+# roads = geojson_sf("RoadNameExtent_EPSG4326_edit.json")
+# roads$startdate = as.POSIXct(substr(roads$startdate, 1, 8), format = "%Y%m%d")
+# roads = roads |>
+#   filter(startdate < "2020-03-02") |>
+#   filter(functionhierarchy != 9 & functionhierarchy != 8) |> 
+#   filter(operationalstatus == 1) |> 
+#   filter(relevance == 1)
+# ## not a walking path, not unimproved road (which includes driveways)
+# ## operational
+# ## cut out non-significant roadways
+# roads$startdate[roads$startdate < "2019-08-01"] = "2019-08-01"
+# roads = st_zm(roads, drop = TRUE, what = "ZM")
+# roads = st_transform(roads, crs = targetcrs)
+# st_write(roads, "roads.gpkg", delete_dsn = T)
+# 
+# # to start, remove all features which are not within 10km of any fire
+# # iso_ext = st_as_sf(as.polygons(ext(iso)))
+# # st_crs(iso_ext) = targetcrs
+# # iso_ext = st_buffer(iso_ext, dist = 10000)
+# roads = roads[iso_ext,]
+# st_write(roads, "roads_restricted10km.gpkg", delete_dsn = T)
 
 # water ####
 setwd("E:/chapter3/isochrons")
@@ -133,36 +135,111 @@ iso = iso |>
 #   filter(Shape__Area > 10000)
 # ## no good- still small features showing up and level of detail is still patchy
 
+# setwd("E:/chapter3/waterways/")
+# water = geojson_sf("NamedWatercourse_EPSG4326_edit.json")
+# ## relevance is a good control here- the higher the number, the smaller the feature
+# 
+# water$startdate = as.POSIXct(substr(water$startdate, 1, 8), format = "%Y%m%d")
+# water = water |>
+#   filter(startdate < "2020-03-02")
+# water$startdate[water$startdate < "2019-08-01"] = "2019-08-01"
+# water = st_zm(water, drop = TRUE, what = "ZM")
+# 
+# par(mfrow = c(3, 3))
+# plot(st_geometry(water |> filter(relevance <= 1)), main = "relevance <= 1")
+# plot(st_geometry(water |> filter(relevance <= 2)), main = "relevance <= 2")
+# plot(st_geometry(water |> filter(relevance <= 3)), main = "relevance <= 3")
+# plot(st_geometry(water |> filter(relevance <= 4)), main = "relevance <= 4")
+# plot(st_geometry(water |> filter(relevance <= 5)), main = "relevance <= 5")
+# plot(st_geometry(water |> filter(relevance <= 6)), main = "relevance <= 6")
+# plot(st_geometry(water |> filter(relevance <= 7)), main = "relevance <= 7")
+# plot(st_geometry(water |> filter(relevance <= 8)), main = "relevance <= 8")
+# plot(st_geometry(water |> filter(relevance <= 9)), main = "relevance <= 9")
+# 
+# water = st_transform(water, crs = targetcrs)
+# st_write(water, "water.gpkg", delete_dsn = T)
+# 
+# # to start, remove all features which are not within 10km of any fire
+# iso_ext = st_as_sf(as.polygons(ext(iso)))
+# st_crs(iso_ext) = targetcrs
+# iso_ext = st_buffer(iso_ext, dist = 10000)
+# water = water[iso_ext,]
+# st_write(water, "water_restricted10km.gpkg", delete_dsn = T)
+
+# setwd("E:/chapter3/waterways/")
+# water = geojson_sf("HydroLine_EPSG4326_edit.json")
+# ## relevance is a good control here- the higher the number, the smaller the feature
+# 
+# water$startdate = as.POSIXct(substr(water$startdate, 1, 8), format = "%Y%m%d")
+# water = water |>
+#   filter(startdate < "2020-03-02")
+# nrow(water)
+# ## 2,697,286
+# water = water |> 
+#   filter(perenniality == 1)
+# nrow(water)
+# ## 295,204
+# water = water |> 
+#   filter(classsubtype == 1)
+# nrow(water)
+# ## 295,065
+# water = water |> 
+#   filter(hydrotype == 1)
+# nrow(water)
+# ## 236,239
+# water$startdate[water$startdate < "2019-08-01"] = "2019-08-01"
+# water = st_zm(water, drop = TRUE, what = "ZM")
+# 
+# # par(mfrow = c(3, 3))
+# # plot(st_geometry(water |> filter(relevance <= 1)), main = "relevance <= 1")
+# # plot(st_geometry(water |> filter(relevance <= 2)), main = "relevance <= 2")
+# # plot(st_geometry(water |> filter(relevance <= 3)), main = "relevance <= 3")
+# # plot(st_geometry(water |> filter(relevance <= 4)), main = "relevance <= 4")
+# # plot(st_geometry(water |> filter(relevance <= 5)), main = "relevance <= 5")
+# # plot(st_geometry(water |> filter(relevance <= 6)), main = "relevance <= 6")
+# # plot(st_geometry(water |> filter(relevance <= 7)), main = "relevance <= 7")
+# # plot(st_geometry(water |> filter(relevance <= 8)), main = "relevance <= 8")
+# # plot(st_geometry(water |> filter(relevance <= 9)), main = "relevance <= 9")
+# 
+# water = st_transform(water, crs = targetcrs)
+# st_write(water, "hydro.gpkg", delete_dsn = T)
+# 
+# # to start, remove all features which are not within 10km of any fire
+# iso_ext = st_as_sf(as.polygons(ext(iso)))
+# st_crs(iso_ext) = targetcrs
+# iso_ext = st_buffer(iso_ext, dist = 10000)
+# water = water[iso_ext,]
+# st_write(water, "hydro_restricted10km.gpkg", delete_dsn = T)
+
 setwd("E:/chapter3/waterways/")
-water = geojson_sf("NamedWatercourse_EPSG4326_edit.json")
+water = geojson_sf("HydroLine_EPSG4326_edit.json")
 ## relevance is a good control here- the higher the number, the smaller the feature
 
 water$startdate = as.POSIXct(substr(water$startdate, 1, 8), format = "%Y%m%d")
 water = water |>
   filter(startdate < "2020-03-02")
+nrow(water)
+## 2,697,286
+water = water |> 
+  filter(classsubtype == 1)
+nrow(water)
+## 2,686,517
+water = water |> 
+  filter(hydrotype == 1)
+nrow(water)
+## 2,612,993
 water$startdate[water$startdate < "2019-08-01"] = "2019-08-01"
 water = st_zm(water, drop = TRUE, what = "ZM")
 
-par(mfrow = c(3, 3))
-plot(st_geometry(water |> filter(relevance <= 1)), main = "relevance <= 1")
-plot(st_geometry(water |> filter(relevance <= 2)), main = "relevance <= 2")
-plot(st_geometry(water |> filter(relevance <= 3)), main = "relevance <= 3")
-plot(st_geometry(water |> filter(relevance <= 4)), main = "relevance <= 4")
-plot(st_geometry(water |> filter(relevance <= 5)), main = "relevance <= 5")
-plot(st_geometry(water |> filter(relevance <= 6)), main = "relevance <= 6")
-plot(st_geometry(water |> filter(relevance <= 7)), main = "relevance <= 7")
-plot(st_geometry(water |> filter(relevance <= 8)), main = "relevance <= 8")
-plot(st_geometry(water |> filter(relevance <= 9)), main = "relevance <= 9")
-
 water = st_transform(water, crs = targetcrs)
-st_write(water, "water.gpkg", delete_dsn = T)
+st_write(water, "hydro_nonpere.gpkg", delete_dsn = T)
 
 # to start, remove all features which are not within 10km of any fire
 iso_ext = st_as_sf(as.polygons(ext(iso)))
 st_crs(iso_ext) = targetcrs
 iso_ext = st_buffer(iso_ext, dist = 10000)
 water = water[iso_ext,]
-st_write(water, "water_restricted10km.gpkg", delete_dsn = T)
+st_write(water, "hydro_nonpere_restricted10km.gpkg", delete_dsn = T)
 
 # # housing density ####
 # # setwd("E:/chapter3/isochrons/Progall_ffdi_v3")
@@ -213,6 +290,99 @@ st_write(water, "water_restricted10km.gpkg", delete_dsn = T)
 # write.csv(houses, "housing_density.csv", row.names = F)
 
 # maps ####
+setwd("E:/chapter3/waterways")
+water = st_read("hydro_nonpere.gpkg")
+water1 = water |> 
+  filter(relevance <= 3)
+water2 = water |> 
+  filter(relevance <= 4)
+water3 = water |> 
+  filter(relevance <= 5)
+water4 = water |> 
+  filter(relevance <= 6)
+setwd("D:/chapter1/bark-type-SDM/data")
+nsw = st_read("NSW_sans_islands.shp")
+nsw_buff = st_buffer(nsw, dist = 50000)
+aus = readRDS("gadm36_AUS_1_sp.rds")
+setwd("D:/chapter1/other_data/Final/terrain variables")
+hill2 = raster("hillshadeformapping.tif")
+setwd("E:/chapter3/for GAMs")
+# g = st_read(paste0("ch3_forGAMs_poly_prefire", x, "_final.gpkg"))
+g = st_read(paste0("ch3_forGAMs_poly_prefire180_final_redo.gpkg"))
+bb = st_buffer(g, dist = 50000)
+
+tmap_options(check.and.fix = T)
+tmap_mode("plot")
+t1 =
+  tm_shape(water1, bbox = bb) + tm_lines(col = mako(10)[6], lwd = 0.5) +
+  tm_add_legend(type = "line", 
+                labels = c("Third order", "Fourth order", "Fifth order", "Sixth order"),
+                col = mako(10)[6],
+                title = "Classification of\nwater features",
+                lwd = c(1.5, 1.0, 0.75, 0.25)) +
+  tm_scale_bar()
+setwd("D:/chapter3/outputs/GAMs")
+tmap_save(t1, "hydro_legend.jpg", height = 2000, width = 2000, units = "px")
+
+t1 =
+  tm_shape(aus, bbox = bb) +
+  tm_fill(col = gray(75/100)) +
+  tm_shape(hill2) +
+  tm_raster(palette = gray(25:100 / 100), n = 100, legend.show = FALSE) +
+  # tm_shape(nsw) +
+  # tm_borders() +
+  tm_shape(water4) + tm_lines(col = mako(10)[6], lwd = 0.25) +
+  tm_shape(water3) + tm_lines(col = mako(10)[6], lwd = 0.75) +
+  tm_shape(water2) + tm_lines(col = mako(10)[6], lwd = 1) +
+  tm_shape(water1) + tm_lines(col = mako(10)[6], lwd = 1.5) +
+  tm_graticules(lines = F) + 
+  tm_layout(inner.margins = 0)
+t1
+
+setwd("D:/chapter3/outputs/GAMs")
+tmap_save(t1, "hydro_nonpere_orders.jpg", height = 3000, width = 2000, units = "px")
+
+setwd("E:/chapter3/waterways")
+water = st_read("hydro.gpkg")
+water1 = water |> 
+  filter(relevance <= 3)
+water2 = water |> 
+  filter(relevance <= 4)
+water3 = water |> 
+  filter(relevance <= 5)
+water4 = water |> 
+  filter(relevance <= 6)
+setwd("D:/chapter1/bark-type-SDM/data")
+nsw = st_read("NSW_sans_islands.shp")
+nsw_buff = st_buffer(nsw, dist = 50000)
+aus = readRDS("gadm36_AUS_1_sp.rds")
+setwd("D:/chapter1/other_data/Final/terrain variables")
+hill2 = raster("hillshadeformapping.tif")
+setwd("E:/chapter3/for GAMs")
+# g = st_read(paste0("ch3_forGAMs_poly_prefire", x, "_final.gpkg"))
+g = st_read(paste0("ch3_forGAMs_poly_prefire180_final_redo.gpkg"))
+bb = st_buffer(g, dist = 50000)
+
+tmap_options(check.and.fix = T)
+tmap_mode("plot")
+t1 =
+  tm_shape(aus, bbox = bb) +
+  tm_fill(col = gray(75/100)) +
+  tm_shape(hill2) +
+  tm_raster(palette = gray(25:100 / 100), n = 100, legend.show = FALSE) +
+  # tm_shape(nsw) +
+  # tm_borders() +
+  tm_shape(water4) + tm_lines(col = mako(10)[6], lwd = 0.25) +
+  tm_shape(water3) + tm_lines(col = mako(10)[6], lwd = 0.75) +
+  tm_shape(water2) + tm_lines(col = mako(10)[6], lwd = 1) +
+  tm_shape(water1) + tm_lines(col = mako(10)[6], lwd = 1.5) +
+  tm_graticules(lines = F) + 
+  tm_layout(inner.margins = 0)
+t1
+
+setwd("D:/chapter3/outputs/GAMs")
+tmap_save(t1, "hydro_orders.jpg", height = 3000, width = 2000, units = "px")
+
 setwd("E:/chapter3/waterways")
 water = st_read("water.gpkg")
 water1 = water |> 

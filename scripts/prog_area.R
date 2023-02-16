@@ -33,11 +33,11 @@ lm1 = lm(data = g, area ~ prog)
 summary(lm1)
 cor(g |> dplyr::select(prog, area), method = "spearman")
 
-g1 = ggplot(g, aes(x = prog, y = area)) +
+g1 = ggplot(g, aes(x = area, y = prog)) +
   geom_point() +
   geom_smooth(method = "lm", col = "black") +
-  xlab(expression("Fire progression rate (km"^2*"/hr)")) +
-  ylab(expression("Area burned (km"^2*")")) +
+  xlab(expression("Fire polygon area (km"^2*")")) +
+  ylab(expression("Fire progression rate (km"^2*"/h)")) +
   ggtitle("Spearman correlation coefficient = 0.95") +
   theme_bw()
 g1

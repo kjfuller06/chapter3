@@ -629,7 +629,10 @@ library(rgeos)
 # process all outputs ####
 setwd("E:/chapter3/for GAMs")
 # g1 = st_read("ch3_forGAMs_poly_prefire180_structure.gpkg")
-g1 = st_read("ch3_forGAMs_poly_prefire180_structure_redo.gpkg")
+# g1 = st_read("ch3_forGAMs_poly_prefire180_structure_redo.gpkg")
+# g1$prog = as.numeric((st_area(g1)/1000000)/g1$progtime)
+
+g1 = st_read("ch3_forGAMs_poly_prefire180_structure_redo_2-14.gpkg")
 g1$prog = as.numeric((st_area(g1)/1000000)/g1$progtime)
 
 g2 = st_read("ch3_forGAMs_poly_prefire180_elevation.gpkg") |>
@@ -671,15 +674,69 @@ summary(g6)
 g7 = st_read("ch3_forGAMs_poly_prefire180_roads.gpkg")
 st_geometry(g7) = NULL
 summary(g7)
-g8 = st_read("ch3_forGAMs_poly_prefire180_water2.gpkg")
+# g8 = st_read("ch3_forGAMs_poly_prefire180_water2.gpkg")
+# st_geometry(g8) = NULL
+# summary(g8)
+# g9 = st_read("ch3_forGAMs_poly_prefire180_water3.gpkg")
+# st_geometry(g9) = NULL
+# summary(g9)
+# g10 = st_read("ch3_forGAMs_poly_prefire180_water4.gpkg")
+# st_geometry(g10) = NULL
+# summary(g10)
+
+# g8.1 = st_read("ch3_forGAMs_poly_prefire180_hydro1.gpkg")
+# st_geometry(g8.1) = NULL
+# summary(g8.1)
+# names(g8.1)[2] = "hydro1"
+# g8.2 = st_read("ch3_forGAMs_poly_prefire180_hydro2.gpkg")
+# st_geometry(g8.2) = NULL
+# summary(g8.2)
+# names(g8.2)[2] = "hydro2"
+# g8 = st_read("ch3_forGAMs_poly_prefire180_hydro3.gpkg")
+# st_geometry(g8) = NULL
+# summary(g8)
+# names(g8)[2] = "hydro3"
+# g9 = st_read("ch3_forGAMs_poly_prefire180_hydro4.gpkg")
+# st_geometry(g9) = NULL
+# summary(g9)
+# names(g9)[2] = "hydro4"
+# g10 = st_read("ch3_forGAMs_poly_prefire180_hydro5.gpkg")
+# st_geometry(g10) = NULL
+# summary(g10)
+# names(g10)[2] = "hydro5"
+# g10.1 = st_read("ch3_forGAMs_poly_prefire180_hydro6.gpkg")
+# st_geometry(g10.1) = NULL
+# summary(g10.1)
+# names(g10.1)[2] = "hydro6"
+# g10.2 = st_read("ch3_forGAMs_poly_prefire180_hydro7.gpkg")
+# st_geometry(g10.2) = NULL
+# summary(g10.2)
+# names(g10.2)[2] = "hydro7"
+
+g8.1 = st_read("ch3_forGAMs_poly_prefire180_hydro1_nonpere.gpkg")
+st_geometry(g8.1) = NULL
+summary(g8.1)
+g8.2 = st_read("ch3_forGAMs_poly_prefire180_hydro2_nonpere.gpkg")
+st_geometry(g8.2) = NULL
+summary(g8.2)
+g8 = st_read("ch3_forGAMs_poly_prefire180_hydro3_nonpere.gpkg")
 st_geometry(g8) = NULL
 summary(g8)
-g9 = st_read("ch3_forGAMs_poly_prefire180_water3.gpkg")
+g9 = st_read("ch3_forGAMs_poly_prefire180_hydro4_nonpere.gpkg")
 st_geometry(g9) = NULL
 summary(g9)
-g10 = st_read("ch3_forGAMs_poly_prefire180_water4.gpkg")
+g10 = st_read("ch3_forGAMs_poly_prefire180_hydro5_nonpere.gpkg")
 st_geometry(g10) = NULL
 summary(g10)
+g10.1 = st_read("ch3_forGAMs_poly_prefire180_hydro6_nonpere.gpkg")
+st_geometry(g10.1) = NULL
+summary(g10.1)
+g10.2 = st_read("ch3_forGAMs_poly_prefire180_hydro7_nonpere.gpkg")
+st_geometry(g10.2) = NULL
+summary(g10.2)
+g10.3 = st_read("ch3_forGAMs_poly_prefire180_hydro8_nonpere.gpkg")
+st_geometry(g10.3) = NULL
+summary(g10.3)
 
 g11 = st_read("ch3_forGAMs_poly_prefire180_bark1.2_redo.gpkg")
 st_geometry(g11) = NULL
@@ -772,9 +829,14 @@ g = g1 |>
   left_join(g5) |>
   left_join(g6) |>
   left_join(g7) |>
+  left_join(g8.1) |>
+  left_join(g8.2) |>
   left_join(g8) |>
   left_join(g9) |>
   left_join(g10) |>
+  left_join(g10.1) |>
+  left_join(g10.2) |>
+  left_join(g10.3) |>
   left_join(g11) |>
   left_join(g12) |>
   left_join(g13) |>
@@ -793,13 +855,13 @@ g = g1 |>
 summary(g)
 rm(g1, g2, g3,
    # g4,
-   g5, g6, g7, g8, g9, g10, g11, g12, g13, g14,
+   g5, g6, g7, g8, g9, g10, g10.1, g10.2, g10.3, g11, g12, g13, g14,
    # g15,
    g16)
 
 g$winddiff.bom = cos((g$aspect - g$winddir) * pi / 180)
 nrow(g)
-## 1,696
+## 1,690
 
 # prefire 180 ####
 setwd("E:/chapter3/GEDI_FESM")
@@ -829,10 +891,12 @@ gref$ffdi_cat = factor(gref$ffdi_cat, levels = c("one",
 
 summary(gref)
 nrow(gref)
-## 1,696
+## 1,690
 setwd("E:/chapter3/for GAMs")
 # st_write(gref, "ch3_forGAMs_poly_prefire180_final.gpkg", delete_dsn = T)
-st_write(gref, "ch3_forGAMs_poly_prefire180_final_redo_1-27.gpkg", delete_dsn = T)
+# st_write(gref, "ch3_forGAMs_poly_prefire180_final_redo_1-27.gpkg", delete_dsn = T)
+# st_write(gref, "ch3_forGAMs_poly_prefire180_final_redo_2-14.gpkg", delete_dsn = T)
+st_write(gref, "ch3_forGAMs_poly_prefire180_final_redo_2-15.gpkg", delete_dsn = T)
 
 # prefire 90 ####
 setwd("E:/chapter3/GEDI_FESM")

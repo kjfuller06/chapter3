@@ -22,8 +22,8 @@ modelnom = paste0("ch3_GAM_iso_prefire", x, "_redo_2-14")
 # modelnom = paste0("ch3_GAM_iso_prefire", x, "_redo_1-27")
 # g = read.csv(paste0("ch3_forGAMs_poly_prefire", x, "_smote.csv"))
 # g = read.csv(paste0("trainingdata_prefire", x, "_iso.csv"))
-g = read.csv(paste0("trainingdata_prefire", x, "_iso_redo_1-27.csv"))
-# g = read.csv(paste0("trainingdata_prefire", x, "_iso_redo_2-14.csv"))
+# g = read.csv(paste0("trainingdata_prefire", x, "_iso_redo_1-27.csv"))
+g = read.csv(paste0("trainingdata_prefire", x, "_iso_redo_2-14.csv"))
 g$ffdi_cat = as.factor(g$ffdi_cat)
 g$fire_reg = as.factor(g$fire_reg)
 g$logprog = log(g$prog)
@@ -78,9 +78,13 @@ gam1 = bam(logprog ~
              # s(windgust.stdev, k = 15) + 
              # s(windgust) +
              # s(windgust.9) + 
-             s(water2, k = 340),
-           # s(water3, k = 340),
-           # s(water4, k = 340),
+             # s(hydro1, k = 340), ## 3.38; r2 = 63.6
+             # s(hydro2, k = 340), ## 10.56; r2 = 63.1
+             # s(hydro3, k = 340), ## 3.27; r2 = 62.7
+             # s(hydro4, k = 340), ## 2.82; r2 = 61.8
+             # s(hydro5, k = 340), ## 2.85; r2 = 62.2
+             # s(hydro6, k = 340), ## 5.78; r2 = 62
+             s(hydro7, k = 340), ## 3.22; r2 = 62.6
            data = g, 
            method = "fREML")
 AIC(logLik.gam(gam1))
@@ -146,7 +150,7 @@ p1 = plot_smooth(gam1, view = "LFMC.1", n.grid = 1000, transform = exp)
 p1 = plot_smooth(gam1, view = "VPD", n.grid = 1000, transform = exp)
 p1 = plot_smooth(gam1, view = "winddir.stdev", n.grid = 1000, transform = exp)
 p1 = plot_smooth(gam1, view = "windspeed.stdev", n.grid = 1000, transform = exp)
-p1 = plot_smooth(gam1, view = "water2", n.grid = 1000, transform = exp)
+p1 = plot_smooth(gam1, view = "hydro7", n.grid = 1000, transform = exp)
 dev.off()
 
 vals = data.frame(variable = c("cover_z_1",
