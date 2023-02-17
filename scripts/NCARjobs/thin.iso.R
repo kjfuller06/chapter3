@@ -133,3 +133,10 @@ write.csv(smote, paste0("ch3_forGAMs_poly_prefire", x, "_smote_2-15.csv"), row.n
 # thinfun(60)
 # thinfun(90)
 # thinfun(180)
+
+# plots ####
+setwd("E:/chapter3/for GAMs")
+train = read.csv(paste0("trainingdata_prefire", x, "_iso_redo_2-15.csv"))
+test = read.csv(paste0("testingdata_prefire", x, "_iso_redo_2-15.csv"))
+all = rbind(train, test)
+nrow(all)

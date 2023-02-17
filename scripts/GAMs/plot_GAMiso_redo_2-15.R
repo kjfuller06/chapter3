@@ -205,7 +205,7 @@ g3 =
   ggplot(fit) +
   geom_boxplot(aes(x = x, middle = fit, ymin = ll, lower = ll, upper = ul, ymax = ul, fill = x, group = x), stat= "identity", alpha = 0.15) +
   scale_fill_manual(values = c("black", "grey60")) +
-  xlab("Majority stringybark prediction") +
+  xlab("Median stringybark prediction") +
   theme_bw() +
   theme(legend.position = "none",
         axis.ticks.y=element_blank(),

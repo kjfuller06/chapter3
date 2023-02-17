@@ -9,38 +9,37 @@ library(viridis)
 
 # cor plots ####
 setwd("E:/chapter3/for GAMs")
-dat = st_read("ch3_forGAMs_poly_prefire180_final_redo.gpkg")
+dat = st_read(paste0("ch3_forGAMs_poly_prefire180_final_redo_2-15.gpkg"))
 st_geometry(dat) = NULL
 
 dat$breaks = apply(dat |> dplyr::select(firelines, roads), 1, FUN = min, na.rm = T)
 
-dat2 = dat |> dplyr::select(elevation_sd, water2, water3, water4, breaks, windspeed, windspeed.1, windspeed.9, windspeed.stdev, windgust, windgust.9, windgust.stdev, winddir.stdev, VPD, VPD.1, VPD.9, LFMC, LFMC.1, LFMC.9, rh98:fhd_normal, stringybark, ribbonbark)
+dat2 = dat |> dplyr::select(elevation_sd, hydro3, hydro4, hydro5, breaks, windspeed, windspeed.1, windspeed.9, windspeed.stdev, windgust, windgust.9, windgust.stdev, winddir.stdev, VPD, VPD.1, VPD.9, LFMC, LFMC.1, LFMC.9, rh98, cover_z_1, over_cover, fhd_normal, stringybark, ribbonbark)
 names(dat2) = c("Standard devation in elevation",
-             "Median distance to top two orders of\nwater features",
-             "Median distance to top three orders of\nwater features",
-             "Median distance to top four orders of\nwater features",
-             "Median distance to roads",
-             "Median wind speed",
-             "10th percentile of wind speed",
-             "90th percentile of wind speed",
-             "Standard deviation in wind speed",
-             "Median wind gust",
-             "90th percentile of wind gust",
-             "Standard deviation in wind gust",
-             "Standard deviation in wind direction",
-             "Median vapour pressure deficit",
-             "10th percentile of vapour pressure deficit",
-             "90th percentile of vapour pressure deficit",
-             "Median live fuel moisture content",
-             "10th percentile of live fuel moisture content",
-             "90th percentile of live fuel moisture content",
-             "Median maximum canopy height",
-             "Median cover",
-             "Median understorey cover",
-             "Median overstorey cover",
-             "Median foliage height diversity index",
-             "Median stringbark probability",
-             "Median ribboning proabability")
+                "Median distance to rivers (orders 1-3)",
+                "Median distance to rivers (orders 1-4)",
+                "Median distance to rivers (orders 1-5)",
+                "Median distance to roads",
+                "Median wind speed",
+                "10th percentile of wind speed",
+                "90th percentile of wind speed",
+                "Standard deviation in wind speed",
+                "Median wind gust",
+                "90th percentile of wind gust",
+                "Standard deviation in wind gust",
+                "Standard deviation in wind direction",
+                "Median vapour pressure deficit",
+                "10th percentile of vapour pressure deficit",
+                "90th percentile of vapour pressure deficit",
+                "Median live fuel moisture content",
+                "10th percentile of live fuel moisture content",
+                "90th percentile of live fuel moisture content",
+                "Median maximum canopy height",
+                "Median understorey cover",
+                "Median overstorey cover",
+                "Median foliage height diversity index",
+                "Median stringbark probability",
+                "Median ribboning proabability")
 setwd("D:/chapter3/outputs")
 jpeg("corr_all.jpeg", width = 5000, height = 5000, res = 300)
 c1 = cor(dat2, method = "spearman") 
@@ -51,30 +50,31 @@ c1 |>
     addCoef.col ='black',
     tl.col = "black",
     tl.srt = 45,
+    tl.cex = 1.2,
     number.cex = 0.5)
 dev.off()
 
-dat2 = dat |> dplyr::select(elevation_sd, water2, water3, water4, breaks, windspeed, windspeed.stdev, windgust, windgust.stdev, winddir.stdev, VPD, LFMC, rh98, cover_z_1, over_cover, fhd_normal, stringybark, ribbonbark)
-names(dat2) = c("Standard devation in elevation",
-                "Median distance to two orders of water features",
-                "Median distance to three orders of water features",
-                "Median distance to four orders of water features",
+dat2 = dat |> dplyr::select(elevation_sd, hydro3, hydro4, hydro5, breaks, windspeed, windspeed.stdev, windgust, windgust.stdev, winddir.stdev, VPD, LFMC, rh98, cover_z_1, over_cover, fhd_normal, stringybark, ribbonbark)
+names(dat2) = c("SD of elevation",
+                "Median distance to rivers (orders 1-3)",
+                "Median distance to rivers (orders 1-4)",
+                "Median distance to rivers (orders 1-5)",
                 "Median distance to roads",
                 "Median wind speed",
-                "Standard deviation in wind speed",
-                "Median wind gust",
-                "Standard deviation in wind gust",
-                "Standard deviation in wind direction",
+                "SD of wind speed",
+                "Median wind gust speed",
+                "SD of wind gust speed",
+                "SD of wind direction",
                 "Median vapour pressure deficit",
                 "Median live fuel moisture content",
                 "Median maximum canopy height",
                 "Median understorey cover",
                 "Median overstorey cover",
                 "Median foliage height diversity index",
-                "Median stringbark probability",
-                "Median ribboning proabability")
+                "Median stringbark prediction",
+                "Median ribboning prediction")
 setwd("D:/chapter3/outputs")
-jpeg("corr_target.jpeg", width = 4000, height = 3250, res = 300)
+jpeg("corr_target.jpeg", width = 5000, height = 3250, res = 300)
 c1 = cor(dat2, method = "spearman") 
 c1 |> 
   corrplot(
@@ -83,6 +83,7 @@ c1 |>
     addCoef.col ='black',
     tl.col = "black",
     tl.srt = 45,
+    tl.cex = 1.2,
     number.cex = 0.5)
 dev.off()
 
@@ -232,10 +233,10 @@ gam.check(gam1)
 # understorey cover and stringybarks ####
 setwd("E:/chapter3/for GAMs")
 x = 180
-modelnom = paste0("ch3_GAM_iso_prefire", x, "_redo")
+modelnom = paste0("ch3_GAM_iso_prefire", x, "_redo_2-15")
 # g = read.csv(paste0("ch3_forGAMs_poly_prefire", x, "_smote.csv"))
 # g = read.csv(paste0("trainingdata_prefire", x, "_iso.csv"))
-g = read.csv(paste0("trainingdata_prefire", x, "_iso_redo.csv"))
+g = read.csv(paste0("trainingdata_prefire", x, "_iso_redo_2-15.csv"))
 g$ffdi_cat = as.factor(g$ffdi_cat)
 g$fire_reg = as.factor(g$fire_reg)
 g$logprog = log(g$prog)
@@ -247,20 +248,21 @@ levels(g$fire_reg) = c("Rainforests",
                        "Grassy woodlands",
                        "Heathlands",
                        "Forested wetlands")
-g$cover_z_1 = g$cover_z_1*100
+g$cover_z_1.1 = g$cover_z_1.1*100
 g$stringybark = g$stringybark*100
 
 setwd("D:/chapter3/outputs/GAMs")
 gam1 = readRDS(paste0(modelnom, ".rds"))
 
-test.temp = expand.grid(cover_z_1 = seq(0, 1, length.out = 50),
+test.temp = expand.grid(cover_z_1.1 = seq(0, 1, length.out = 50),
                         elevation_sd = median(g$elevation_sd),
-                        stringybark = median(g$stringybark),
+                        stringybark = 0,
                         LFMC.1 = seq(50, 130, length.out = 50),
                         VPD = median(g$VPD),
                         winddir.stdev = median(g$winddir.stdev),
                         windspeed.stdev = median(g$windspeed.stdev),
-                        water2 = median(g$water2))
+                        hydro4.9 = median(g$hydro4.9))
+test.temp$stringybark = as.factor(test.temp$stringybark)
 
 preds<-predict(gam1, type="terms", newdata=test.temp,
                se.fit=TRUE)
@@ -274,12 +276,12 @@ fit$x = fit$x*100
 g1 = ggplot(fit, aes(x=x, y=y)) + 
   geom_tile(aes(fill = fit)) +
   # scale_fill_viridis(palette = turbo) +
-  scale_fill_gradientn(colors = turbo(20)[14:20], name = "Fire rate of\nprogression\n(km\u00B2/hr)") +
-  geom_density_2d(data = g, aes(x = cover_z_1, y = LFMC.1), contour_var = "ndensity", col = "white", breaks = c(0, 0.5, 0.7, 0.9)) +
+  scale_fill_gradientn(colors = turbo(20)[14:20], name = "Fire rate of\nprogression\n(km\u00B2/h)") +
+  geom_density_2d(data = g, aes(x = cover_z_1.1, y = LFMC.1), contour_var = "ndensity", col = "white", breaks = c(0, 0.5, 0.7, 0.9)) +
   facet_wrap(facets = "fire_reg") +
   theme_bw() +
-  xlab("Median understorey cover (%)") +
-  ylab("Live fuel moisture content (10th percentile)")
+  xlab("Understorey cover (%; 10th percentile)") +
+  ylab("Live fuel moisture content (%; 10th percentile)")
 g1
 ggsave(plot = g1, "coverz1-LFMC.jpg", device = "jpg", height = 2000, width = 2000, units = "px")
 
@@ -304,8 +306,8 @@ fit$x = fit$x*100
 g1 = ggplot(fit, aes(x=x, y=y)) + 
   geom_tile(aes(fill = fit)) +
   # scale_fill_viridis(palette = turbo) +
-  scale_fill_gradientn(colors = turbo(20)[14:20], name = "Fire rate of\nprogression\n(km\u00B2/hr)") +
-  geom_density_2d(data = g, aes(x = cover_z_1, y = VPD), contour_var = "ndensity", col = "white", breaks = c(0, 0.6, 0.7, 0.8, 0.9, 1)) +
+  scale_fill_gradientn(colors = turbo(20)[14:20], name = "Fire rate of\nprogression\n(km\u00B2/h)") +
+  geom_density_2d(data = g, aes(x = cover_z_1.1, y = VPD), contour_var = "ndensity", col = "white", breaks = c(0, 0.6, 0.7, 0.8, 0.9, 1)) +
   facet_wrap(facets = "fire_reg") +
   theme_bw() +
   xlab("Understorey Cover (%)") +
@@ -327,14 +329,15 @@ par(mfrow = c(1, 2))
 with(g |> filter(fire_reg == "Rainforests"), hist(cover_z_1))
 with(g |> filter(fire_reg != "Rainforests"), hist(cover_z_1))
 
-test.temp = expand.grid(cover_z_1 = median(g$cover_z_1),
+test.temp = expand.grid(cover_z_1.1 = median(g$cover_z_1.1),
                         elevation_sd = median(g$elevation_sd),
-                        stringybark = seq(0, 1, length.out = 50),
+                        stringybark = c(0, 1),
                         LFMC.1 = seq(min(g$LFMC.1), max(g$LFMC.1), length.out = 50),
                         VPD = median(g$VPD),
                         winddir.stdev = median(g$winddir.stdev),
                         windspeed.stdev = median(g$windspeed.stdev),
-                        water2 = median(g$water2))
+                        hydro4.9 = median(g$hydro4.9))
+test.temp$stringybark = as.factor(test.temp$stringybark)
 
 preds<-predict(gam1, type="terms", newdata=test.temp,
                se.fit=TRUE)
@@ -343,12 +346,11 @@ x = test.temp[,4]
 preds.temp = rowSums(preds$fit) + coef(gam1)[1]
 fit = data.frame(fit = exp(preds.temp), x = x)
 fit$y = test.temp$stringybark
-fit$y = fit$y*100
 
 g1 = ggplot(fit, aes(x=x, y=y)) + 
   geom_tile(aes(fill = fit)) +
   # scale_fill_viridis(palette = turbo) +
-  scale_fill_gradientn(colors = turbo(20)[14:20], name = "Fire rate of\nprogression\n(km\u00B2/hr)") +
+  scale_fill_gradientn(colors = turbo(20)[14:20], name = "Fire rate of\nprogression\n(km\u00B2/h)") +
   geom_density_2d(data = g, aes(x = LFMC.1, y = stringybark), contour_var = "ndensity", col = "white", breaks = c(0, 0.6, 0.7, 0.8, 0.9, 1)) +
   facet_wrap(facets = "fire_reg") +
   theme_bw() +
