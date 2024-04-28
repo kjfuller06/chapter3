@@ -2,11 +2,65 @@ library(raster)
 library(sf)
 library(tidyverse)
 
-setwd("E:/chapter3/isochrons/Progall_ffdi_v3")
+setwd("E:/chapter3/original/Progall_ffdi_v3")
 isochrons = st_read("progall_ffdi_v3.shp")
+nrow(isochrons)
+## 121,432
 isochrons$ID = c(1:nrow(isochrons))
 # isochrons$area_check = st_area(isochrons)
 ## measurements are the same, do not apear to be cumulative- each polygon is measured separately; the variable "area" is in km
+isochrons$time = as.POSIXct(isochrons$time)
+isochrons$lasttim = as.POSIXct(isochrons$lasttim)
+isochrons$progtime = difftime(isochrons$time, isochrons$lasttim, units = "hours")
+isochrons$progtime = as.numeric(isochrons$progtime)
+nrow(isochrons |> filter(progtime == 0))
+## 4,333
+
+touching_list = st_touches(isochrons)
+
+isochrons$prepolyID = NA
+iso = list()
+for(i in c(1:nrow(isochrons))){
+  iso.temp = isochrons[i,]
+  pre.temp = isochrons[touching_list[[i]],]
+  if(iso.temp$progtime != 0){
+    pre.temp = pre.temp |> filter(time == iso.temp$lasttim)
+    if(nrow(pre.temp) == 1){
+      iso.temp$prepolyID = pre.temp$ID
+      iso.temp$fireline = sum(st_length(st_cast(st_intersection(iso.temp, pre.temp))))
+      iso[[i]] = iso.temp
+    } else if(nrow(pre.temp) > 1){
+      iso.temp$prepolyID = list(pre.temp$ID)
+      iso.temp$fireline = sum(st_length(st_cast(st_intersection(iso.temp, pre.temp))))
+      iso[[i]] = iso.temp
+    } else if(nrow(pre.temp) == 0){
+      print(paste0(i, " isochron does not overlap with any polygons with matching timestamps"))
+    }
+  }
+}
+iso2 = bind_rows(iso)
+## ERROR: Can't combine `..13$prepolyID` <integer> and `..14$prepolyID` <list>.
+iso2 = list()
+for(i in 1:length(iso)){
+  iso.temp = iso[[i]]
+  iso.temp$prepolyID = paste(unlist(iso.temp$prepolyID), collapse = ', ')
+  iso2[[i]] = iso.temp
+}
+iso2 = bind_rows(iso2)
+nrow(iso2)
+## 121,431
+setwd("E:/chapter3/isochrons")
+st_write(iso2, "isochrons_withfireline.gpkg", delete_dsn = T)
+
+isochrons = iso2 |>  
+  filter(progtime <= 24)
+nrow(isochrons)
+## 70,257
+isochrons |> filter(as.numeric(fireline) == 0) |> nrow()
+## 1,033 ## this is an issue
+isochrons$prog = isochrons$area/isochrons$progtime/isochrons$fireline
+# isochrons$prog = isochrons$area/isochrons$progtime/isochrons$fireline
+st_write(isochrons, "isochrons_withfireline_f1.gpkg", delete_dsn = T)
 
 setwd("E:/chapter3/GEDI_FESM")
 # load data, create new polygons, intersecting the geometries of both
