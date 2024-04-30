@@ -35,11 +35,18 @@ for(i in c(1:nrow(isochrons))){
       iso[[i]] = iso.temp
     } else if(nrow(pre.temp) == 0){
       print(paste0(i, " isochron does not overlap with any polygons with matching timestamps"))
+      iso.temp$prepolyID = NA
+      iso.temp$fireline = NA
+      iso[[i]] = iso.temp
     }
   }
 }
 iso2 = bind_rows(iso)
 ## ERROR: Can't combine `..13$prepolyID` <integer> and `..14$prepolyID` <list>.
+# setwd("E:/chapter3/isochrons")
+# saveRDS(iso, "isochrons_beforebind.rds")
+
+iso2 = readRDS("isochrons_beforebind.rds")
 iso2 = list()
 for(i in 1:length(iso)){
   iso.temp = iso[[i]]
