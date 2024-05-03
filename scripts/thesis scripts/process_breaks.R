@@ -89,43 +89,132 @@ roads = roads[iso_ext,]
 st_write(roads, "roads_restricted10km.gpkg", delete_dsn = T)
 
 # water ####
-setwd("E:/chapter3/isochrons")
-iso = st_read("isochrons_8days.gpkg")
-targetcrs = st_crs(iso)
-iso$poly_sD = as.POSIXct(iso$poly_sD)
-iso = iso |>
-  dplyr::select(ID, poly_sD)
-## length(unique(iso$ID)) = 106,729
+# setwd("E:/chapter3/isochrons")
+# iso = st_read("isochrons_8days.gpkg")
+# targetcrs = st_crs(iso)
+# iso$poly_sD = as.POSIXct(iso$poly_sD)
+# iso = iso |>
+#   dplyr::select(ID, poly_sD)
+# ## length(unique(iso$ID)) = 106,729
+# 
+# setwd("E:/chapter3/waterways/")
+# water = geojson_sf("HydroLine_EPSG4326_edit.json")
+# ## relevance is a good control here- the higher the number, the smaller the feature
+# 
+# water$startdate = as.POSIXct(substr(water$startdate, 1, 8), format = "%Y%m%d")
+# water = water |>
+#   filter(startdate < "2020-03-02")
+# nrow(water)
+# ## 2,697,286
+# water = water |> 
+#   filter(classsubtype == 1)
+# nrow(water)
+# ## 2,686,517
+# water = water |> 
+#   filter(hydrotype == 1)
+# nrow(water)
+# ## 2,612,993
+# water$startdate[water$startdate < "2019-08-01"] = "2019-08-01"
+# water = st_zm(water, drop = TRUE, what = "ZM")
+# 
+# water = st_transform(water, crs = targetcrs)
+# st_write(water, "hydro_nonpere.gpkg", delete_dsn = T)
+# 
+# # to start, remove all features which are not within 10km of any fire
+# iso_ext = st_as_sf(as.polygons(ext(iso)))
+# st_crs(iso_ext) = targetcrs
+# iso_ext = st_buffer(iso_ext, dist = 10000)
+# water = water[iso_ext,]
+# st_write(water, "hydro_nonpere_restricted10km.gpkg", delete_dsn = T)
 
-setwd("E:/chapter3/waterways/")
-water = geojson_sf("HydroLine_EPSG4326_edit.json")
-## relevance is a good control here- the higher the number, the smaller the feature
+setwd("D:/chapter3/climatedem")
+r = raster("strahler2_thin.tif")
+df = matrix(c(0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11,
+              2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,
+              2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12),
+            ncol = 3, byrow = F)
+r = reclassify(r, rcl = df)
+writeRaster(r, "strahler2_reclass.tif", overwrite = T)
 
-water$startdate = as.POSIXct(substr(water$startdate, 1, 8), format = "%Y%m%d")
-water = water |>
-  filter(startdate < "2020-03-02")
-nrow(water)
-## 2,697,286
-water = water |> 
-  filter(classsubtype == 1)
-nrow(water)
-## 2,686,517
-water = water |> 
-  filter(hydrotype == 1)
-nrow(water)
-## 2,612,993
-water$startdate[water$startdate < "2019-08-01"] = "2019-08-01"
-water = st_zm(water, drop = TRUE, what = "ZM")
-
-water = st_transform(water, crs = targetcrs)
-st_write(water, "hydro_nonpere.gpkg", delete_dsn = T)
-
-# to start, remove all features which are not within 10km of any fire
-iso_ext = st_as_sf(as.polygons(ext(iso)))
-st_crs(iso_ext) = targetcrs
-iso_ext = st_buffer(iso_ext, dist = 10000)
-water = water[iso_ext,]
-st_write(water, "hydro_nonpere_restricted10km.gpkg", delete_dsn = T)
+r = raster("strahler2_reclass.tif")
+df = matrix(c(0, 11,
+              11, 12,
+              NA, 1),
+            ncol = 3, byrow = F)
+r12 = reclassify(r, rcl = df)
+r12
+writeRaster(r12, "strahler2_reclass12.tif", overwrite = T)
+df = matrix(c(0, 10, 11,
+              10, 11, 12,
+              NA, 1, NA),
+            ncol = 3, byrow = F)
+r11 = reclassify(r, rcl = df)
+r11
+# plot(r11)
+writeRaster(r11, "strahler2_reclass11.tif", overwrite = T)
+df = matrix(c(0, 9, 10,
+              9, 10, 12,
+              NA, 1, NA),
+            ncol = 3, byrow = F)
+r10 = reclassify(r, rcl = df)
+r10
+writeRaster(r10, "strahler2_reclass10.tif", overwrite = T)
+df = matrix(c(0, 8, 9,
+              8, 9, 12,
+              NA, 1, NA),
+            ncol = 3, byrow = F)
+r9 = reclassify(r, rcl = df)
+r9
+writeRaster(r9, "strahler2_reclass9.tif", overwrite = T)
+df = matrix(c(0, 7, 8,
+              7, 8, 12,
+              NA, 1, NA),
+            ncol = 3, byrow = F)
+r8 = reclassify(r, rcl = df)
+r8
+writeRaster(r8, "strahler2_reclass8.tif", overwrite = T)
+df = matrix(c(0, 6, 7,
+              6, 7, 12,
+              NA, 1, NA),
+            ncol = 3, byrow = F)
+r7 = reclassify(r, rcl = df)
+r7
+writeRaster(r7, "strahler2_reclass7.tif", overwrite = T)
+df = matrix(c(0, 5, 6,
+              5, 6, 12,
+              NA, 1, NA),
+            ncol = 3, byrow = F)
+r6 = reclassify(r, rcl = df)
+r6
+writeRaster(r6, "strahler2_reclass6.tif", overwrite = T)
+df = matrix(c(0, 4, 5,
+              4, 5, 12,
+              NA, 1, NA),
+            ncol = 3, byrow = F)
+r5 = reclassify(r, rcl = df)
+r5
+writeRaster(r5, "strahler2_reclass5.tif", overwrite = T)
+df = matrix(c(0, 3, 4,
+              3, 4, 12,
+              NA, 1, NA),
+            ncol = 3, byrow = F)
+r4 = reclassify(r, rcl = df)
+r4
+writeRaster(r4, "strahler2_reclass4.tif", overwrite = T)
+df = matrix(c(0, 2, 3,
+              2, 3, 12,
+              NA, 1, NA),
+            ncol = 3, byrow = F)
+r3 = reclassify(r, rcl = df)
+r3
+writeRaster(r3, "strahler2_reclass3.tif", overwrite = T)
+df = matrix(c(0, 2,
+              2, 12,
+              1, NA),
+            ncol = 3, byrow = F)
+r2 = reclassify(r, rcl = df)
+r2
+writeRaster(r2, "strahler2_reclass2.tif", overwrite = T)
 
 # maps ####
 setwd("E:/chapter3/waterways")
