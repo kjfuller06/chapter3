@@ -4,90 +4,90 @@ library(tidyverse)
 library(exactextractr)
 library(rgeos)
 
-# GEDI ####
-setwd("E:/chapter3/isochrons")
-isochrons = st_read("isochrons_withfireline_f1.gpkg")
-length(unique(isochrons$ID))
-## 70,370
-setwd("E:/chapter3/GEDI_FESM")
-# load data, create new polygons, intersecting the geometries of both
-gedi = st_read("ch3_FESMandfhist_forpoly.gpkg")
-targetcrs = st_crs(gedi)
-gedi = st_transform(gedi, st_crs(isochrons))
-g_buffer = st_buffer(gedi, dist = 12.5)
-g_buffer = st_intersection(g_buffer, isochrons)
-length(unique(g_buffer$ID))
-## 5,061
-backup = g_buffer
-g_buffer$TUF = as.numeric(difftime(g_buffer$time, g_buffer$DateTime, units = "days"))
-g_buffer = g_buffer |> 
-  filter(TUF > 0)
-length(unique(g_buffer$ID))
-## 4,726
-
-gedi = g_buffer |> 
-  dplyr::select(ID, rh98:over_cover)
-st_geometry(gedi) = NULL
-
-# calculate the median of continuous variables
-g_agg1 = aggregate(data = gedi, rh98 ~ ID, FUN = median)
-names(g_agg1)[2] = "rh98"
-g_agg1.1 = aggregate(data = gedi, rh98 ~ ID, FUN = function(x) quantile(x, probs = 0.1, na.rm = T))
-names(g_agg1.1)[2] = "rh98.1"
-g_agg1.9 = aggregate(data = gedi, rh98 ~ ID, FUN = function(x) quantile(x, probs = 0.9, na.rm = T))
-names(g_agg1.9)[2] = "rh98.9"
-g_agg2 = aggregate(data = gedi, cover ~ ID, FUN = median)
-names(g_agg2)[2] = "cover"
-g_agg2.1 = aggregate(data = gedi, cover ~ ID, FUN = function(x) quantile(x, probs = 0.1, na.rm = T))
-names(g_agg2.1)[2] = "cover.1"
-g_agg2.9 = aggregate(data = gedi, cover ~ ID, FUN = function(x) quantile(x, probs = 0.9, na.rm = T))
-names(g_agg2.9)[2] = "cover.9"
-g_agg3 = aggregate(data = gedi, cover_z_1 ~ ID, FUN = median)
-names(g_agg3)[2] = "cover_z_1"
-g_agg3.1 = aggregate(data = gedi, cover_z_1 ~ ID, FUN = function(x) quantile(x, probs = 0.1, na.rm = T))
-names(g_agg3.1)[2] = "cover_z_1.1"
-g_agg3.9 = aggregate(data = gedi, cover_z_1 ~ ID, FUN = function(x) quantile(x, probs = 0.9, na.rm = T))
-names(g_agg3.9)[2] = "cover_z_1.9"
-g_agg4 = aggregate(data = gedi, over_cover ~ ID, FUN = median)
-names(g_agg4)[2] = "over_cover"
-g_agg4.1 = aggregate(data = gedi, over_cover ~ ID, FUN = function(x) quantile(x, probs = 0.1, na.rm = T))
-names(g_agg4.1)[2] = "over_cover.1"
-g_agg4.9 = aggregate(data = gedi, over_cover ~ ID, FUN = function(x) quantile(x, probs = 0.9, na.rm = T))
-names(g_agg4.9)[2] = "over_cover.9"
-g_agg5 = aggregate(data = gedi, fhd_normal ~ ID, FUN = median)
-names(g_agg5)[2] = "fhd_normal"
-g_agg5.1 = aggregate(data = gedi, fhd_normal ~ ID, FUN = function(x) quantile(x, probs = 0.1, na.rm = T))
-names(g_agg5.1)[2] = "fhd_normal.1"
-g_agg5.9 = aggregate(data = gedi, fhd_normal ~ ID, FUN = function(x) quantile(x, probs = 0.9, na.rm = T))
-names(g_agg5.9)[2] = "fhd_normal.9"
-
-g = gedi |> 
-  dplyr::select(ID) |> 
-  unique() |> 
-  left_join(g_agg1) |> 
-  left_join(g_agg1.1) |> 
-  left_join(g_agg1.9) |> 
-  left_join(g_agg2) |>
-  left_join(g_agg2.1) |> 
-  left_join(g_agg2.9) |> 
-  left_join(g_agg3) |>
-  left_join(g_agg3.1) |> 
-  left_join(g_agg3.9) |> 
-  left_join(g_agg4) |> 
-  left_join(g_agg4.1) |> 
-  left_join(g_agg4.9) |> 
-  left_join(g_agg5) |> 
-  left_join(g_agg5.1) |> 
-  left_join(g_agg5.9)
-isochrons = left_join(isochrons, g, by = "ID")
-nrow(isochrons |> filter(is.na(rh98)))
-## 65,644
-nrow(isochrons |> filter(!is.na(rh98)))
-## 4,726
-
-setwd("E:/chapter3/for GAMs")
-st_write(isochrons, "isochrons_gedi_m1.gpkg", delete_dsn = T)
-
+# # GEDI ####
+# setwd("E:/chapter3/isochrons")
+# isochrons = st_read("isochrons_withfireline_f1.gpkg")
+# length(unique(isochrons$ID))
+# ## 70,370
+# setwd("E:/chapter3/GEDI_FESM")
+# # load data, create new polygons, intersecting the geometries of both
+# gedi = st_read("ch3_FESMandfhist_forpoly.gpkg")
+# targetcrs = st_crs(gedi)
+# gedi = st_transform(gedi, st_crs(isochrons))
+# g_buffer = st_buffer(gedi, dist = 12.5)
+# g_buffer = st_intersection(g_buffer, isochrons)
+# length(unique(g_buffer$ID))
+# ## 5,061
+# backup = g_buffer
+# g_buffer$TUF = as.numeric(difftime(g_buffer$time, g_buffer$DateTime, units = "days"))
+# g_buffer = g_buffer |> 
+#   filter(TUF > 0)
+# length(unique(g_buffer$ID))
+# ## 4,726
+# 
+# gedi = g_buffer |> 
+#   dplyr::select(ID, rh98:over_cover)
+# st_geometry(gedi) = NULL
+# 
+# # calculate the median of continuous variables
+# g_agg1 = aggregate(data = gedi, rh98 ~ ID, FUN = median)
+# names(g_agg1)[2] = "rh98"
+# g_agg1.1 = aggregate(data = gedi, rh98 ~ ID, FUN = function(x) quantile(x, probs = 0.1, na.rm = T))
+# names(g_agg1.1)[2] = "rh98.1"
+# g_agg1.9 = aggregate(data = gedi, rh98 ~ ID, FUN = function(x) quantile(x, probs = 0.9, na.rm = T))
+# names(g_agg1.9)[2] = "rh98.9"
+# g_agg2 = aggregate(data = gedi, cover ~ ID, FUN = median)
+# names(g_agg2)[2] = "cover"
+# g_agg2.1 = aggregate(data = gedi, cover ~ ID, FUN = function(x) quantile(x, probs = 0.1, na.rm = T))
+# names(g_agg2.1)[2] = "cover.1"
+# g_agg2.9 = aggregate(data = gedi, cover ~ ID, FUN = function(x) quantile(x, probs = 0.9, na.rm = T))
+# names(g_agg2.9)[2] = "cover.9"
+# g_agg3 = aggregate(data = gedi, cover_z_1 ~ ID, FUN = median)
+# names(g_agg3)[2] = "cover_z_1"
+# g_agg3.1 = aggregate(data = gedi, cover_z_1 ~ ID, FUN = function(x) quantile(x, probs = 0.1, na.rm = T))
+# names(g_agg3.1)[2] = "cover_z_1.1"
+# g_agg3.9 = aggregate(data = gedi, cover_z_1 ~ ID, FUN = function(x) quantile(x, probs = 0.9, na.rm = T))
+# names(g_agg3.9)[2] = "cover_z_1.9"
+# g_agg4 = aggregate(data = gedi, over_cover ~ ID, FUN = median)
+# names(g_agg4)[2] = "over_cover"
+# g_agg4.1 = aggregate(data = gedi, over_cover ~ ID, FUN = function(x) quantile(x, probs = 0.1, na.rm = T))
+# names(g_agg4.1)[2] = "over_cover.1"
+# g_agg4.9 = aggregate(data = gedi, over_cover ~ ID, FUN = function(x) quantile(x, probs = 0.9, na.rm = T))
+# names(g_agg4.9)[2] = "over_cover.9"
+# g_agg5 = aggregate(data = gedi, fhd_normal ~ ID, FUN = median)
+# names(g_agg5)[2] = "fhd_normal"
+# g_agg5.1 = aggregate(data = gedi, fhd_normal ~ ID, FUN = function(x) quantile(x, probs = 0.1, na.rm = T))
+# names(g_agg5.1)[2] = "fhd_normal.1"
+# g_agg5.9 = aggregate(data = gedi, fhd_normal ~ ID, FUN = function(x) quantile(x, probs = 0.9, na.rm = T))
+# names(g_agg5.9)[2] = "fhd_normal.9"
+# 
+# g = gedi |> 
+#   dplyr::select(ID) |> 
+#   unique() |> 
+#   left_join(g_agg1) |> 
+#   left_join(g_agg1.1) |> 
+#   left_join(g_agg1.9) |> 
+#   left_join(g_agg2) |>
+#   left_join(g_agg2.1) |> 
+#   left_join(g_agg2.9) |> 
+#   left_join(g_agg3) |>
+#   left_join(g_agg3.1) |> 
+#   left_join(g_agg3.9) |> 
+#   left_join(g_agg4) |> 
+#   left_join(g_agg4.1) |> 
+#   left_join(g_agg4.9) |> 
+#   left_join(g_agg5) |> 
+#   left_join(g_agg5.1) |> 
+#   left_join(g_agg5.9)
+# isochrons = left_join(isochrons, g, by = "ID")
+# nrow(isochrons |> filter(is.na(rh98)))
+# ## 65,644
+# nrow(isochrons |> filter(!is.na(rh98)))
+# ## 4,726
+# 
+# setwd("E:/chapter3/for GAMs")
+# st_write(isochrons, "isochrons_gedi_m1.gpkg", delete_dsn = T)
+# 
 # terrain ####
 setwd("D:/chapter1/data")
 slope = raster("proj_dem_slope_30m.tif")
@@ -97,26 +97,32 @@ rough = raster("terrain_roughness.tif")
 setwd("E:/chapter3/for GAMs")
 isochrons = st_read("isochrons_gedi_m1.gpkg")
 targetcrs = st_crs(isochrons)
+iso = isochrons |> 
+  dplyr::select(ID)
 
-isochrons = st_transform(isochrons, crs = st_crs(rough))
-rough = raster::extract(rough, isochrons, method = 'simple')
-isochrons$rough.1 = unlist(lapply(rough, FUN = function(x) quantile(x, probs = 0.1, na.rm = T)))
-isochrons$rough.5 = unlist(lapply(rough, FUN = function(x) median(x, na.rm = T)))
-isochrons$rough.9 = unlist(lapply(rough, FUN = function(x) quantile(x, probs = 0.9, na.rm = T)))
+iso = st_transform(iso, crs = st_crs(rough))
+rough = raster::extract(rough, iso, method = 'simple')
+iso$rough.1 = unlist(lapply(rough, FUN = function(x) quantile(x, probs = 0.1, na.rm = T)))
+iso$rough.5 = unlist(lapply(rough, FUN = function(x) median(x, na.rm = T)))
+iso$rough.9 = unlist(lapply(rough, FUN = function(x) quantile(x, probs = 0.9, na.rm = T)))
 
-isochrons = st_transform(isochrons, crs = st_crs(slope))
-slope = raster::extract(slope, isochrons, method = 'simple')
-isochrons$slope.1 = unlist(lapply(slope, FUN = function(x) quantile(x, probs = 0.1, na.rm = T)))
-isochrons$slope.5 = unlist(lapply(slope, FUN = function(x) median(x, na.rm = T)))
-isochrons$slope.9 = unlist(lapply(slope, FUN = function(x) quantile(x, probs = 0.9, na.rm = T)))
+iso = st_transform(iso, crs = st_crs(slope))
+slope = raster::extract(slope, iso, method = 'simple')
+iso$slope.1 = unlist(lapply(slope, FUN = function(x) quantile(x, probs = 0.1, na.rm = T)))
+iso$slope.5 = unlist(lapply(slope, FUN = function(x) median(x, na.rm = T)))
+iso$slope.9 = unlist(lapply(slope, FUN = function(x) quantile(x, probs = 0.9, na.rm = T)))
 
-isochrons = st_transform(isochrons, crs = targetcrs)
+st_geometry(iso) = NULL
+isochrons = isochrons |> 
+  left_join(iso)
 st_write(isochrons, paste0("isochrons_terrain_m2.gpkg"), delete_dsn = T)
 
 # fueltype ####
 setwd("E:/chapter3/for GAMs")
-g = st_read("isochrons_terrain_m2.gpkg")
-targetcrs = st_crs(g)
+isochrons = st_read("isochrons_terrain_m2.gpkg")
+targetcrs = st_crs(isochrons)
+g = isochrons |> 
+  dplyr::select(ID)
 
 setwd("D:/chapter1/data")
 fire_reg = read.csv("fire_regimes.csv") |> 
@@ -135,13 +141,10 @@ getmode = function(x){
   return(m)
 } 
 
-g$fueltype = unlist(lapply(fueltype, getmode))
-g = g |> 
-  left_join(fire_reg)
+isochrons$fueltype = unlist(lapply(fueltype, getmode))
 
-g = st_transform(g, crs = targetcrs)
 setwd("E:/chapter3/for GAMs")
-st_write(g, "isochrons_fueltype_m3.gpkg", delete_dsn = T)
+st_write(isochrons, "isochrons_fueltype_m3.gpkg", delete_dsn = T)
 
 # barktype ####
 setwd("E:/chapter3/for GAMs")
@@ -150,7 +153,7 @@ targetcrs = st_crs(iso)
 g = iso |>
   dplyr::select(ID)
 
-setwd("D:/chapter1/Major outputs/final maps")
+setwd("D:/chapter1/Major outputs/final maps/final maps")
 r = raster("NSW_stringybark_distribution_final.tif")
 
 g = st_transform(g, crs = st_crs(r))
@@ -172,11 +175,11 @@ iso = iso |>
   left_join(g, by = "ID")
 
 setwd("E:/chapter3/for GAMs")
-st_write(g, "isochrons_barktype_m4.gpkg", delete_dsn = T)
+st_write(iso, "isochrons_barktype_m4.gpkg", delete_dsn = T)
 
 # LFMC ####
-setwd("E:/chapter3/from Rachael/R project/LFMC/LFMC/GEE_LFMC/LFMC_rasters/GEE_v20May2020_RevisedMask/")
-lfmc = list.files()
+setwd("E:/chapter3/original/from Rachael/R project/LFMC/LFMC/GEE_LFMC/LFMC_rasters/GEE_v20May2020_RevisedMask/")
+lfmc = list.files(pattern = "LFMC")
 lfmc = data.frame(files = lfmc)
 lfmc$date = as.POSIXct(substr(lfmc$files, 6, 15), format = "%Y_%m_%d")
 ## using as.Date led to problems for this extraction but the severity data extraction did fine- double-checked
@@ -184,12 +187,14 @@ lfmc$date = as.POSIXct(substr(lfmc$files, 6, 15), format = "%Y_%m_%d")
 setwd("E:/chapter3/for GAMs")
 iso = st_read("isochrons_barktype_m4.gpkg")
 targetcrs = st_crs(iso)
+iso$poly_sD = as.POSIXct(iso$lasttim)
+iso$poly_eD = as.POSIXct(iso$time)
 g = iso |>
   dplyr::select(ID,
                 poly_sD,
                 poly_eD)
 
-setwd("E:/chapter3/from Rachael/R project/LFMC/LFMC/GEE_LFMC/LFMC_rasters/GEE_v20May2020_RevisedMask/")
+setwd("E:/chapter3/original/from Rachael/R project/LFMC/LFMC/GEE_LFMC/LFMC_rasters/GEE_v20May2020_RevisedMask/")
 r = raster(lfmc$files[1])
 g = st_transform(g, crs = st_crs(r))
 ids = unique(g$ID)
@@ -285,7 +290,8 @@ for(i in c(1:length(ids))){
 }
 
 g_temp = bind_rows(l)
-st_geometry(g_temp) = NULL
+g_temp = g_temp |> 
+  dplyr::select(-c(poly_sD, poly_eD))
 iso = iso |> 
   left_join(g_temp, by = "ID")
 
@@ -293,7 +299,7 @@ setwd("E:/chapter3/for GAMs")
 st_write(iso, "isochrons_LFMC_m5.gpkg", delete_dsn = T)
 
 # VPD ####
-setwd("E:/chapter3/from Rachael/VPD")
+setwd("E:/chapter3/original/from Rachael/VPD")
 vpd = list.files()
 vpd = data.frame(files = vpd)
 vpd$date = as.POSIXct(substr(vpd$files, 5, 12), format = "%Y%m%d")
@@ -302,9 +308,11 @@ setwd("E:/chapter3/for GAMs")
 iso = st_read("isochrons_LFMC_m5.gpkg")
 targetcrs = st_crs(iso)
 g = iso |> 
-  filter(ID)
+  dplyr::select(ID,
+                poly_sD,
+                poly_eD)
 
-setwd("E:/chapter3/from Rachael/VPD")
+setwd("E:/chapter3/original/from Rachael/VPD")
 r = raster(vpd$files[1])
 crs(r) = CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs+ towgs84=0,0,0")
 ## res 0.05
@@ -371,6 +379,8 @@ for(i in c(1:length(ids))){
 }
 
 g_temp = bind_rows(l)
+g_temp = g_temp |> 
+  dplyr::select(-c(poly_sD, poly_eD))
 st_geometry(g_temp)
 iso = iso |> 
   left_join(g_temp, by = "ID")
@@ -512,12 +522,14 @@ g_temp = bind_rows(l)
 setwd("E:/chapter3/for GAMs")
 write.csv(g_temp, "wind_m7.csv", row.names = F)
 
+g_temp = g_temp |> 
+  dplyr::select(-c(poly_sD, poly_eD, index))
 iso = iso |> 
   left_join(g_temp, by = "ID")
-st_write(g, "isochrons_wind_m7.gpkg", delete_dsn = T)
+st_write(iso, "isochrons_wind_m7.gpkg", delete_dsn = T)
 
 # strahler ####
-setwd("E:/chapter3/isochrons")
+setwd("E:/chapter3/for GAMs")
 # iso = st_read("isochrons_withfireline_f1.gpkg")
 iso = st_read("isochrons_wind_m7.gpkg")
 targetcrs = st_crs(iso)
@@ -525,12 +537,14 @@ g = iso |>
   dplyr::select(ID)
 
 setwd("D:/chapter3/climatedem")
+g.temp = list()
 for(i in c(12:3)){
   i.temp = as.character(c(i:12))
   s_all = list()
   for(x in i.temp){
     s.temp = st_read(paste0("strahler", x, ".gpkg")) |> st_transform(crs = targetcrs)
     names(s.temp)[1:2] = c("cat", "value")
+    s.temp$value = as.numeric(s.temp$value)
     s_all[[x]] = s.temp
   }
   s_all = bind_rows(s_all)
@@ -543,12 +557,16 @@ for(i in c(12:3)){
     s.temp$length[is.na(s.temp$length)] = 0
     names(s.temp)[2] = paste0("strahler", i)
     
-    g = g |> 
+    g.temp[[i]] = g |> 
       left_join(s.temp, by = "ID")
   }
 }
+g = bind_cols(g.temp)
+g = g |> 
+  dplyr::select(c(1, 2, 5, 8, 11, 14, 17, 20, 23))
+names(g)[1] = "ID"
 st_geometry(g) = NULL
 iso = iso |> 
   left_join(g, by = "ID")
 st_write(iso, paste0("isochrons_strahler_m8.gpkg"), delete_dsn = T)
-
+## many NaNs- should they be 0?
