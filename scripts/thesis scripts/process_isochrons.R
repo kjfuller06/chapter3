@@ -4,18 +4,18 @@ library(tidyverse)
 # library(tmap)
 # library(spdep)
 
-# validate geometries ####
-setwd("E:/chapter3/original/Progall_ffdi_v3")
-isochrons = st_read("progall_ffdi_v3.shp")
-nrow(isochrons)
-## 121,432
-isochrons = st_make_valid(isochrons)
-all(st_is_valid(isochrons))
-nrow(isochrons)
-## 121,432
-setwd("E:/chapter3/isochrons")
-st_write(isochrons, "isochrons_valid.gpkg", delete_dsn = T)
-
+# # validate geometries ####
+# setwd("E:/chapter3/original/Progall_ffdi_v3")
+# isochrons = st_read("progall_ffdi_v3.shp")
+# nrow(isochrons)
+# ## 121,432
+# isochrons = st_make_valid(isochrons)
+# all(st_is_valid(isochrons))
+# nrow(isochrons)
+# ## 121,432
+# setwd("E:/chapter3/isochrons")
+# st_write(isochrons, "isochrons_valid.gpkg", delete_dsn = T)
+# 
 # # check methods ####
 # tmap_options(check.and.fix = T)
 # tmap_mode("view")
@@ -70,27 +70,43 @@ isochrons$progtime = as.numeric(isochrons$progtime)
 nrow(isochrons |> filter(progtime == 0))
 ## 4,333
 
-touching_list = st_touches(isochrons)
+# touching_list = st_touches(isochrons)
+# saveRDS(touching_list, "touchinglist.rds")
+touching_list = readRDS("touchinglist.rds")
 
 isochrons$prepolyID = NA
 iso = list()
+# i = 35 makes a good example
 for(i in c(1:nrow(isochrons))){
   iso.temp = isochrons[i,]
-  pre.temp = isochrons[touching_list[[i]],]
+  iso.centroid = st_transform(st_centroid(iso.temp), crs = 4326)
+  touch.temp = isochrons[touching_list[[i]],]
+  
   if(iso.temp$progtime != 0){
-    pre.temp = pre.temp |> filter(time == iso.temp$lasttim)
+    pre.temp = touch.temp |> filter(time == iso.temp$lasttim)
+    pre.centroid = st_transform(st_centroid(pre.temp), crs = 4326)
+    
+    # tmap_mode("view")
+    # tm_shape(iso.temp) + tm_polygons() +
+    #   tm_shape(iso.centroid) + tm_dots() +
+    #   tm_shape(pre.temp) + tm_polygons(col = "blue") +
+    #   tm_shape(pre.centroid) + tm_dots()
+
     if(nrow(pre.temp) == 1){
       iso.temp$prepolyID = pre.temp$ID
       iso.temp$fireline = sum(st_length(st_cast(st_intersection(iso.temp, pre.temp))))
+      iso.temp$spreaddir = as.numeric(mean((nngeo::st_azimuth(pre.centroid, iso.centroid))))
       iso[[i]] = iso.temp
     } else if(nrow(pre.temp) > 1){
       iso.temp$prepolyID = list(pre.temp$ID)
       iso.temp$fireline = sum(st_length(st_cast(st_intersection(iso.temp, pre.temp))))
+      iso.temp$spreaddir = as.numeric(mean((nngeo::st_azimuth(pre.centroid, iso.centroid))))
       iso[[i]] = iso.temp
     } else if(nrow(pre.temp) == 0){
       print(paste0(i, " isochron does not overlap with any polygons with matching timestamps"))
       iso.temp$prepolyID = NA
       iso.temp$fireline = NA
+      iso.temp$spreaddir = NA
       iso[[i]] = iso.temp
     }
   }
