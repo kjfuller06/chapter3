@@ -3,6 +3,7 @@ library(raster)
 library(tidyverse)
 library(exactextractr)
 library(rgeos)
+library(tmap)
 
 # # GEDI ####
 # setwd("E:/chapter3/isochrons")
@@ -20,12 +21,12 @@ library(rgeos)
 # ## 5,061
 # backup = g_buffer
 # g_buffer$TUF = as.numeric(difftime(g_buffer$time, g_buffer$DateTime, units = "days"))
-# g_buffer = g_buffer |> 
+# g_buffer = g_buffer |>
 #   filter(TUF > 0)
 # length(unique(g_buffer$ID))
 # ## 4,726
 # 
-# gedi = g_buffer |> 
+# gedi = g_buffer |>
 #   dplyr::select(ID, rh98:over_cover)
 # st_geometry(gedi) = NULL
 # 
@@ -61,23 +62,23 @@ library(rgeos)
 # g_agg5.9 = aggregate(data = gedi, fhd_normal ~ ID, FUN = function(x) quantile(x, probs = 0.9, na.rm = T))
 # names(g_agg5.9)[2] = "fhd_normal.9"
 # 
-# g = gedi |> 
-#   dplyr::select(ID) |> 
-#   unique() |> 
-#   left_join(g_agg1) |> 
-#   left_join(g_agg1.1) |> 
-#   left_join(g_agg1.9) |> 
+# g = gedi |>
+#   dplyr::select(ID) |>
+#   unique() |>
+#   left_join(g_agg1) |>
+#   left_join(g_agg1.1) |>
+#   left_join(g_agg1.9) |>
 #   left_join(g_agg2) |>
-#   left_join(g_agg2.1) |> 
-#   left_join(g_agg2.9) |> 
+#   left_join(g_agg2.1) |>
+#   left_join(g_agg2.9) |>
 #   left_join(g_agg3) |>
-#   left_join(g_agg3.1) |> 
-#   left_join(g_agg3.9) |> 
-#   left_join(g_agg4) |> 
-#   left_join(g_agg4.1) |> 
-#   left_join(g_agg4.9) |> 
-#   left_join(g_agg5) |> 
-#   left_join(g_agg5.1) |> 
+#   left_join(g_agg3.1) |>
+#   left_join(g_agg3.9) |>
+#   left_join(g_agg4) |>
+#   left_join(g_agg4.1) |>
+#   left_join(g_agg4.9) |>
+#   left_join(g_agg5) |>
+#   left_join(g_agg5.1) |>
 #   left_join(g_agg5.9)
 # isochrons = left_join(isochrons, g, by = "ID")
 # nrow(isochrons |> filter(is.na(rh98)))
@@ -528,26 +529,298 @@ iso = iso |>
   left_join(g_temp, by = "ID")
 st_write(iso, "isochrons_wind_m7.gpkg", delete_dsn = T)
 
-# strahler ####
+# # strahler ####
+# setwd("E:/chapter3/for GAMs")
+# # iso = st_read("isochrons_withfireline_f1.gpkg")
+# iso = st_read("isochrons_wind_m7.gpkg")
+# targetcrs = st_crs(iso)
+# g = iso |> 
+#   dplyr::select(ID)
+# 
+# setwd("D:/chapter3/climatedem")
+# g.temp = list()
+# for(i in c(12:3)){
+#   i.temp = as.character(c(i:12))
+#   s_all = list()
+#   for(x in i.temp){
+#     s.temp = st_read(paste0("strahler", x, ".gpkg")) |> st_transform(crs = targetcrs)
+#     names(s.temp)[1:2] = c("cat", "value")
+#     s.temp$value = as.numeric(s.temp$value)
+#     s_all[[x]] = s.temp
+#   }
+#   s_all = bind_rows(s_all)
+#   
+#   s.temp = st_intersection(s_all, g)
+#   if(nrow(s.temp) > 0){
+#     s.temp$length = as.numeric(st_length(s.temp))
+#     st_geometry(s.temp) = NULL
+#     s.temp = aggregate(data = s.temp, length ~ ID, FUN = sum)
+#     s.temp$length[is.na(s.temp$length)] = 0
+#     names(s.temp)[2] = paste0("strahler", i)
+#     
+#     g.temp[[i]] = g |> 
+#       left_join(s.temp, by = "ID")
+#   }
+# }
+# g = bind_cols(g.temp)
+# g = g |> 
+#   dplyr::select(c(1, 2, 5, 8, 11, 14, 17, 20, 23))
+# names(g)[1] = "ID"
+# st_geometry(g) = NULL
+# iso = iso |> 
+#   left_join(g, by = "ID")
+# st_write(iso, paste0("isochrons_strahler_m8.gpkg"), delete_dsn = T)
+# ## many NaNs- should they be 0?
+# 
+# look at NaNs ####
+tmap_mode("view")
 setwd("E:/chapter3/for GAMs")
-# iso = st_read("isochrons_withfireline_f1.gpkg")
-iso = st_read("isochrons_wind_m7.gpkg")
+iso = st_read("isochrons_strahler_m8.gpkg")
+iso
+iso = st_make_valid(iso)
+nrow(iso)
+## 70,370
+
+setwd("D:/chapter1/data")
+nsw = st_read("NSW_sans_islands.shp") |> 
+  st_transform(crs = st_crs(iso))
+
+iso.yes = st_contains(nsw, iso)
+iso = iso[unlist(iso.yes),]
+nrow(iso)
+## 70,076
+
+# - - - wind - - - #
+nrow(iso |> filter(is.na(winddir)))
+## 270
+tm_shape(iso |> filter(is.na(winddir))) + tm_polygons()
+iso |> filter(is.na(winddir))
+## all wind variables are NaN
+iso = iso |> 
+  filter(!is.na(winddir))
+nrow(iso)
+## 69,806
+
+nrow(iso |> filter(is.na(windgust.stdev)))
+## 390
+tm_shape(iso |> filter(is.na(windgust.stdev))) + tm_polygons()
+iso |> filter(is.na(windgust.stdev))
+## few other variables NaN
+iso |> filter(is.na(windgust))
+## only two observations, worth removing
+iso = iso |> 
+  filter(!is.na(windgust))
+nrow(iso)
+## 69,804
+
+# - - - LFMC - - - #
+nrow(iso |> filter(is.na(LFMC)))
+## 3,568
+tm_shape(iso |> filter(is.na(LFMC))) + tm_polygons()
+iso |> filter(is.na(LFMC))
+## LFMC is a critical variable
+iso = iso |> 
+  filter(!is.na(LFMC))
+nrow(iso)
+## 66,236
+
+# - - - barktypes - - - #
+nrow(iso |> filter(is.na(stringybark.1)))
+## 5,017
+tm_shape(iso |> filter(is.na(stringybark.1))) + tm_polygons()
+iso |> filter(is.na(stringybark.1))
+summary(iso |> filter(is.na(stringybark.1)))
+sort(unique(iso$fueltype[is.na(iso$stringybark.1)]))
+iso.b = iso |> 
+  filter(is.na(stringybark.1))
+g = iso.b |>
+  dplyr::select(ID)
+
+setwd("D:/chapter1/Major outputs/final maps/final maps")
+r = raster("NSW_stringybark_distribution_final.tif")
+
+g = st_transform(g, crs = st_crs(r))
+l = raster::extract(r, g, method = 'simple')
+summary(unlist(lapply(l, FUN = function(x) quantile(x, probs = 0.1, na.rm = T))))
+## all extracted values are NaN
+iso = iso |> 
+  filter(!is.na(stringybark.1))
+nrow(iso)
+## 61,219
+
+# - - - Strahler - - - #
+nrow(iso |> filter(is.na(strahler4)))
+## 33,708
+nrow(iso |> filter(is.na(strahler11)))
+## 61,137
+min(iso$strahler4, na.rm = T)
+## all NaNs are length of stream = 0
+iso |> filter(is.na(strahler4) & !is.na(strahler11))
+iso |> filter(is.na(strahler11) & !is.na(strahler4))
+## lengths of stream added to each successive Strahler classification (larger stream lengths added to smaller streams, not the other way around)
+## NaNs caused by no streams being present
+
+iso$strahler4[is.na(iso$strahler4)] = 0
+iso$strahler5[is.na(iso$strahler5)] = 0
+iso$strahler6[is.na(iso$strahler6)] = 0
+iso$strahler7[is.na(iso$strahler7)] = 0
+iso$strahler8[is.na(iso$strahler8)] = 0
+iso$strahler9[is.na(iso$strahler9)] = 0
+iso$strahler10[is.na(iso$strahler10)] = 0
+iso$strahler11[is.na(iso$strahler11)] = 0
+summary(iso)
+
+# - - - GEDI - - - #
+nrow(iso |> filter(is.na(rh98)))
+## 56,658
+## this is the VAST majority of fire polygons!!
+
+setwd("E:/chapter3/for GAMs")
+st_write(iso, "isochrons_prep1.gpkg", delete_dsn = T)
+
+# GEDI, redo ####
+setwd("E:/chapter3/for GAMs")
+isochrons = st_read("isochrons_prep1.gpkg")
+length(unique(isochrons$ID))
+## 61,219
+isochrons = isochrons |> 
+  dplyr::select(-c(rh98:fhd_normal.9))
+
+setwd("E:/chapter3/GEDI_FESM")
+# load data, create new polygons, intersecting the geometries of both
+gedi = st_read("ch3_FESMandfhist_forpoly.gpkg")
+targetcrs = st_crs(gedi)
+gedi = st_transform(gedi, st_crs(isochrons))
+nrow(gedi)
+## 110,897
+
+gedi$TUF = as.numeric(difftime(max(isochrons$time), gedi$DateTime, units = "days"))
+gedi = gedi |>
+  filter(TUF > 0)
+nrow(gedi)
+## 108,172
+
+# overlapping GEDI and isochrons
+g.temp = st_intersection(gedi, isochrons)
+g_agg1 = aggregate(data = g.temp, rh98 ~ ID, FUN = median)
+names(g_agg1)[2] = "rh98"
+g_agg2 = aggregate(data = g.temp, cover ~ ID, FUN = median)
+names(g_agg2)[2] = "cover"
+g_agg3 = aggregate(data = g.temp, cover_z_1 ~ ID, FUN = median)
+names(g_agg3)[2] = "cover_z_1"
+g_agg4 = aggregate(data = g.temp, over_cover ~ ID, FUN = median)
+names(g_agg4)[2] = "over_cover"
+g_agg5 = aggregate(data = g.temp, fhd_normal ~ ID, FUN = median)
+names(g_agg5)[2] = "fhd_normal"
+
+g.temp = g.temp |>
+  dplyr::select(ID)
+st_geometry(g.temp) = NULL
+g.temp = g.temp |>
+  unique() |>
+  left_join(g_agg1) |>
+  left_join(g_agg2) |>
+  left_join(g_agg3) |>
+  left_join(g_agg4) |>
+  left_join(g_agg5)
+g.temp = inner_join(isochrons, g.temp)
+g.temp$Gmethod = "median"
+
+# non-overlapping GEDI and isochrons
+iso.temp = isochrons |> 
+  filter(!ID %in% g.temp$ID)
+g.temp.dist = st_nearest_feature(iso.temp, g.temp)
+iso.temp$shot_number = gedi$shot_number[g.temp.dist]
+
+st_geometry(gedi) = NULL
+iso.temp = iso.temp |> 
+  left_join(gedi)
+iso.temp = iso.temp |> 
+  dplyr::select(c(time:strahler11, rh98:over_cover))
+iso.temp$Gmethod = "nearest"
+
+iso.temp = rbind(g.temp, iso.temp)
+setwd("E:/chapter3/for GAMs")
+st_write(iso.temp, "isochrons_prep2.gpkg", delete_dsn = T)
+
+# prep ####
+setwd("D:/chapter1/data")
+fireregs = read.csv("fire_regimes.csv")
+
+setwd("E:/chapter3/for GAMs")
+isochrons = st_read("isochrons_prep2.gpkg")
+length(unique(isochrons$ID))
+## 61,219
+
+isochrons = isochrons |> filter(fueltype < 42)
+isochrons = isochrons |> left_join(fireregs)
+nrow(isochrons)
+## 58,888
+
+isochrons$fire_reg[isochrons$fire_reg == 7] = 6
+
+isochrons$logprog = log(isochrons$prog)
+isochrons$logspread = log(isochrons$spread)
+
+isochrons$stringybark.5[isochrons$stringybark.5 == 0.5] = 1
+isochrons$stringybark.5 = as.factor(isochrons$stringybark.5)
+
+isochrons$ribbonbark.5[isochrons$ribbonbark.5 == 0.5] = 1
+isochrons$ribbonbark.5 = as.factor(isochrons$ribbonbark.5)
+
+isochrons$s11 = isochrons$strahler11/isochrons$area
+isochrons$s10 = isochrons$strahler10/isochrons$area
+isochrons$s9 = isochrons$strahler9/isochrons$area
+isochrons$s8 = isochrons$strahler8/isochrons$area
+isochrons$s7 = isochrons$strahler7/isochrons$area
+isochrons$s6 = isochrons$strahler6/isochrons$area
+isochrons$s5 = isochrons$strahler5/isochrons$area
+isochrons$s4 = isochrons$strahler4/isochrons$area
+
+isochrons$windnorth = cos(isochrons$winddir * pi / 180)
+isochrons$windeast = sin(isochrons$winddir * pi / 180)
+
+isochrons$ffdi_cat = NA
+isochrons$ffdi_cat[isochrons$ffdi_final <= 12] = "one"
+isochrons$ffdi_cat[isochrons$ffdi_final > 12 & isochrons$ffdi_final <= 25] = "two"
+isochrons$ffdi_cat[isochrons$ffdi_final > 25 & isochrons$ffdi_final <= 49] = "three"
+isochrons$ffdi_cat[isochrons$ffdi_final > 49 & isochrons$ffdi_final <= 74] = "four"
+isochrons$ffdi_cat[isochrons$ffdi_final > 74 & isochrons$ffdi_final <= 99] = "four"
+isochrons$ffdi_cat[isochrons$ffdi_final > 99] = "four"
+isochrons$ffdi_cat = factor(isochrons$ffdi_cat, levels = c("one",
+                                           "two",
+                                           "three",
+                                           "four"))
+
+isochrons = na.omit(isochrons)
+nrow(isochrons)
+##58,556
+
+b = isochrons
+st_geometry(b) = NULL
+b |> group_by(fire_reg) |> tally() |> as.data.frame()
+# rainforest:                 3378
+# wet sclerophyll (shrubby):  9619
+# wet sclerophyll (grassy):   9635
+# dry sclerophyll (s/g):      11506
+# dry sclerophyll (shrubby):  23397
+# grassy woodland:            1348
+
+st_write(isochrons, "isochrons_prep3.gpkg", delete_dsn = T)
+
+# strahler, redo ####
+setwd("E:/chapter3/for GAMs")
+iso = st_read("isochrons_prep3.gpkg")
 targetcrs = st_crs(iso)
 g = iso |> 
   dplyr::select(ID)
 
 setwd("D:/chapter3/climatedem")
 g.temp = list()
-for(i in c(12:3)){
-  i.temp = as.character(c(i:12))
-  s_all = list()
-  for(x in i.temp){
-    s.temp = st_read(paste0("strahler", x, ".gpkg")) |> st_transform(crs = targetcrs)
-    names(s.temp)[1:2] = c("cat", "value")
-    s.temp$value = as.numeric(s.temp$value)
-    s_all[[x]] = s.temp
-  }
-  s_all = bind_rows(s_all)
+for(i in c(11:4)){
+  s_all = st_read(paste0("strahler", i, ".gpkg")) |> st_transform(crs = targetcrs)
+  names(s_all)[1:2] = c("cat", "value")
+  s_all$value = as.numeric(s_all$value)
   
   s.temp = st_intersection(s_all, g)
   if(nrow(s.temp) > 0){
@@ -555,18 +828,283 @@ for(i in c(12:3)){
     st_geometry(s.temp) = NULL
     s.temp = aggregate(data = s.temp, length ~ ID, FUN = sum)
     s.temp$length[is.na(s.temp$length)] = 0
-    names(s.temp)[2] = paste0("strahler", i)
+    names(s.temp)[2] = paste0("strahler", i, ".only")
     
-    g.temp[[i]] = g |> 
-      left_join(s.temp, by = "ID")
+    g.temp[[i]] = s.temp
   }
 }
-g = bind_cols(g.temp)
-g = g |> 
-  dplyr::select(c(1, 2, 5, 8, 11, 14, 17, 20, 23))
-names(g)[1] = "ID"
-st_geometry(g) = NULL
-iso = iso |> 
-  left_join(g, by = "ID")
-st_write(iso, paste0("isochrons_strahler_m8.gpkg"), delete_dsn = T)
-## many NaNs- should they be 0?
+g = iso |> 
+  left_join(g.temp[[4]]) |> 
+  left_join(g.temp[[5]]) |> 
+  left_join(g.temp[[6]]) |> 
+  left_join(g.temp[[7]]) |> 
+  left_join(g.temp[[8]]) |> 
+  left_join(g.temp[[9]]) |> 
+  left_join(g.temp[[10]]) |> 
+  left_join(g.temp[[11]])
+
+g$strahler4.only[is.na(g$strahler4.only)] = 0
+g$strahler5.only[is.na(g$strahler5.only)] = 0
+g$strahler6.only[is.na(g$strahler6.only)] = 0
+g$strahler7.only[is.na(g$strahler7.only)] = 0
+g$strahler8.only[is.na(g$strahler8.only)] = 0
+g$strahler9.only[is.na(g$strahler9.only)] = 0
+g$strahler10.only[is.na(g$strahler10.only)] = 0
+g$strahler11.only[is.na(g$strahler11.only)] = 0
+
+g$s11.only = g$strahler11.only/g$area
+g$s10.only = g$strahler10.only/g$area
+g$s9.only = g$strahler9.only/g$area
+g$s8.only = g$strahler8.only/g$area
+g$s7.only = g$strahler7.only/g$area
+g$s6.only = g$strahler6.only/g$area
+g$s5.only = g$strahler5.only/g$area
+g$s4.only = g$strahler4.only/g$area
+
+setwd("E:/chapter3/for GAMs")
+st_write(g, "isochrons_prep4.gpkg", delete_dsn = T)
+
+# GEDI, redo, redo ####
+setwd("E:/chapter3/for GAMs")
+isochrons = st_read("isochrons_prep4.gpkg")
+length(unique(isochrons$ID))
+## 58,556
+names(isochrons)[names(isochrons) == "rh98" | names(isochrons) == "cover" | names(isochrons) == "cover_z_1" | names(isochrons) == "over_cover" | names(isochrons) == "fhd_normal" | names(isochrons) == "Gmethod"] = c("rh98.all", "cover.all", "cover_z_1.all", "over_cover.all", "fhd_normal.all", "Gmethod.all")
+
+setwd("E:/chapter3/GEDI_FESM")
+gedi = st_read("ch3_FESMandfhist_forpoly.gpkg")
+targetcrs = st_crs(gedi)
+gedi = st_transform(gedi, st_crs(isochrons))
+nrow(gedi)
+## 110,897
+
+gedi$TUF = as.numeric(difftime(max(isochrons$time), gedi$DateTime, units = "days"))
+gedi = gedi |>
+  filter(TUF > 0)
+nrow(gedi)
+## 108,172
+
+# 12.5 m
+g_buffer = st_buffer(gedi, dist = 12.5)
+
+# overlapping GEDI and isochrons
+g.temp = st_intersection(g_buffer, isochrons)
+g_agg1 = aggregate(data = g.temp, rh98 ~ ID, FUN = median)
+names(g_agg1)[2] = "rh98.12.5"
+g_agg2 = aggregate(data = g.temp, cover ~ ID, FUN = median)
+names(g_agg2)[2] = "cover.12.5"
+g_agg3 = aggregate(data = g.temp, cover_z_1 ~ ID, FUN = median)
+names(g_agg3)[2] = "cover_z_1.12.5"
+g_agg4 = aggregate(data = g.temp, over_cover ~ ID, FUN = median)
+names(g_agg4)[2] = "over_cover.12.5"
+g_agg5 = aggregate(data = g.temp, fhd_normal ~ ID, FUN = median)
+names(g_agg5)[2] = "fhd_normal.12.5"
+
+g.temp = g.temp |>
+  dplyr::select(ID)
+st_geometry(g.temp) = NULL
+g.temp.12.5 = g.temp |>
+  unique() |>
+  left_join(g_agg1) |>
+  left_join(g_agg2) |>
+  left_join(g_agg3) |>
+  left_join(g_agg4) |>
+  left_join(g_agg5)
+nrow(g.temp.12.5)
+## 4,287
+g.temp = isochrons |> 
+  dplyr::select(ID)
+g.temp = full_join(g.temp, g.temp.12.5)
+setwd("E:/chapter3/for GAMs")
+st_write(g.temp, "isochrons_GEDI12.5.gpkg", delete_dsn = T)
+rm(g_agg1, g_agg2, g_agg3, g_agg4, g_agg5, g.temp.12.5, g.temp)
+
+# 25 m
+g_buffer = st_buffer(gedi, dist = 25)
+
+# overlapping GEDI and isochrons
+g.temp = st_intersection(g_buffer, isochrons)
+g_agg1 = aggregate(data = g.temp, rh98 ~ ID, FUN = median)
+names(g_agg1)[2] = "rh98.25"
+g_agg2 = aggregate(data = g.temp, cover ~ ID, FUN = median)
+names(g_agg2)[2] = "cover.25"
+g_agg3 = aggregate(data = g.temp, cover_z_1 ~ ID, FUN = median)
+names(g_agg3)[2] = "cover_z_1.25"
+g_agg4 = aggregate(data = g.temp, over_cover ~ ID, FUN = median)
+names(g_agg4)[2] = "over_cover.25"
+g_agg5 = aggregate(data = g.temp, fhd_normal ~ ID, FUN = median)
+names(g_agg5)[2] = "fhd_normal.25"
+
+g.temp = g.temp |>
+  dplyr::select(ID)
+st_geometry(g.temp) = NULL
+g.temp.25 = g.temp |>
+  unique() |>
+  left_join(g_agg1) |>
+  left_join(g_agg2) |>
+  left_join(g_agg3) |>
+  left_join(g_agg4) |>
+  left_join(g_agg5)
+nrow(g.temp.25)
+## 4,626, an increase of 339 shots over buffer of 12.5 m
+g.temp = isochrons |> 
+  dplyr::select(ID)
+g.temp = full_join(g.temp, g.temp.25)
+setwd("E:/chapter3/for GAMs")
+st_write(g.temp, "isochrons_GEDI25.gpkg", delete_dsn = T)
+rm(g_agg1, g_agg2, g_agg3, g_agg4, g_agg5, g.temp.25, g.temp)
+
+# 100 m
+g_buffer = st_buffer(gedi, dist = 100)
+
+# overlapping GEDI and isochrons
+g.temp = st_intersection(g_buffer, isochrons)
+g_agg1 = aggregate(data = g.temp, rh98 ~ ID, FUN = median)
+names(g_agg1)[2] = "rh98.100"
+g_agg2 = aggregate(data = g.temp, cover ~ ID, FUN = median)
+names(g_agg2)[2] = "cover.100"
+g_agg3 = aggregate(data = g.temp, cover_z_1 ~ ID, FUN = median)
+names(g_agg3)[2] = "cover_z_1.100"
+g_agg4 = aggregate(data = g.temp, over_cover ~ ID, FUN = median)
+names(g_agg4)[2] = "over_cover.100"
+g_agg5 = aggregate(data = g.temp, fhd_normal ~ ID, FUN = median)
+names(g_agg5)[2] = "fhd_normal.100"
+
+g.temp = g.temp |>
+  dplyr::select(ID)
+st_geometry(g.temp) = NULL
+g.temp.100 = g.temp |>
+  unique() |>
+  left_join(g_agg1) |>
+  left_join(g_agg2) |>
+  left_join(g_agg3) |>
+  left_join(g_agg4) |>
+  left_join(g_agg5)
+nrow(g.temp.100)
+## 6,745, an increase of 2,458 shots over a buffer of 12.5 m
+g.temp = isochrons |> 
+  dplyr::select(ID)
+g.temp = full_join(g.temp, g.temp.100)
+setwd("E:/chapter3/for GAMs")
+st_write(g.temp, "isochrons_GEDI100.gpkg", delete_dsn = T)
+rm(g_agg1, g_agg2, g_agg3, g_agg4, g_agg5, g.temp.100, g.temp)
+
+# 1000 m
+g_buffer = st_buffer(gedi, dist = 1000)
+
+# overlapping GEDI and isochrons
+g.temp = st_intersection(g_buffer, isochrons)
+g_agg1 = aggregate(data = g.temp, rh98 ~ ID, FUN = median)
+names(g_agg1)[2] = "rh98.1000"
+g_agg2 = aggregate(data = g.temp, cover ~ ID, FUN = median)
+names(g_agg2)[2] = "cover.1000"
+g_agg3 = aggregate(data = g.temp, cover_z_1 ~ ID, FUN = median)
+names(g_agg3)[2] = "cover_z_1.1000"
+g_agg4 = aggregate(data = g.temp, over_cover ~ ID, FUN = median)
+names(g_agg4)[2] = "over_cover.1000"
+g_agg5 = aggregate(data = g.temp, fhd_normal ~ ID, FUN = median)
+names(g_agg5)[2] = "fhd_normal.1000"
+
+g.temp = g.temp |>
+  dplyr::select(ID)
+st_geometry(g.temp) = NULL
+g.temp.1000 = g.temp |>
+  unique() |>
+  left_join(g_agg1) |>
+  left_join(g_agg2) |>
+  left_join(g_agg3) |>
+  left_join(g_agg4) |>
+  left_join(g_agg5)
+nrow(g.temp.1000)
+## 21,854, an increase of 17,567 shots over a buffer of 12.5 m
+g.temp = isochrons |> 
+  dplyr::select(ID)
+g.temp = full_join(g.temp, g.temp.1000)
+setwd("E:/chapter3/for GAMs")
+st_write(g.temp, "isochrons_GEDI1000.gpkg", delete_dsn = T)
+rm(g_agg1, g_agg2, g_agg3, g_agg4, g_agg5, g.temp.1000, g.temp)
+
+# join all
+g.temp.12.5 = st_read("isochrons_GEDI12.5.gpkg")
+st_geometry(g.temp.12.5) = NULL
+g.temp.25 = st_read("isochrons_GEDI25.gpkg")
+st_geometry(g.temp.25) = NULL
+g.temp.100 = st_read("isochrons_GEDI100.gpkg")
+st_geometry(g.temp.100) = NULL
+g.temp.1000 = st_read("isochrons_GEDI1000.gpkg")
+st_geometry(g.temp.1000) = NULL
+
+g.temp = full_join(isochrons, g.temp.12.5) |> 
+  left_join(g.temp.25) |> 
+  left_join(g.temp.100) |> 
+  left_join(g.temp.1000)
+
+setwd("E:/chapter3/for GAMs")
+st_write(g.temp, "isochrons_prep5.gpkg", delete_dsn = T)
+
+# elevation ####
+setwd("D:/chapter1/data")
+elev = raster("proj_dem_s.tif")
+
+setwd("E:/chapter3/for GAMs")
+isochrons = st_read("isochrons_prep5.gpkg")
+length(unique(isochrons$ID))
+## 58,556
+targetcrs = st_crs(isochrons)
+iso = isochrons |> 
+  dplyr::select(ID)
+
+iso = st_transform(iso, crs = st_crs(elev))
+elev = raster::extract(elev, iso, method = 'simple')
+iso$elev.1 = unlist(lapply(elev, FUN = function(x) quantile(x, probs = 0.1, na.rm = T)))
+iso$elev.5 = unlist(lapply(elev, FUN = function(x) median(x, na.rm = T)))
+iso$elev.9 = unlist(lapply(elev, FUN = function(x) quantile(x, probs = 0.9, na.rm = T)))
+
+st_geometry(iso) = NULL
+isochrons = isochrons |> 
+  left_join(iso)
+st_write(isochrons, paste0("isochrons_prep6.gpkg"), delete_dsn = T)
+
+# wind alignment ####
+setwd("D:/chapter1/data")
+aspect = raster("proj_dem_aspect_30m.tif")
+backup = aspect
+aspect = backup
+slope = raster("proj_dem_slope_30m.tif")
+backup2 = slope
+slope = backup2
+st_crs(aspect) == st_crs(slope)
+## TRUE
+
+setwd("E:/chapter3/for GAMs")
+isochrons = st_read("isochrons_prep6.gpkg")
+length(unique(isochrons$ID))
+## 58,556
+targetcrs = st_crs(isochrons)
+iso = isochrons |> 
+  dplyr::select(ID, winddir)
+
+iso = st_transform(iso, crs = st_crs(aspect))
+aspect = backup
+aspect = raster::extract(aspect, iso[1:10,], method = 'simple')
+slope = backup2
+slope = raster::extract(slope, iso[1:10,], method = 'simple')
+for(i in 1:length(aspect)){
+  iso.temp = iso[i,]
+  aspect[[i]] = (aspect[[i]] - iso.temp$winddir)*slope[[i]]
+}
+iso$aspect.1 = unlist(lapply(aspect, FUN = function(x) quantile(x, probs = 0.1, na.rm = T)))
+iso$aspect.5 = unlist(lapply(aspect, FUN = function(x) median(x, na.rm = T)))
+iso$aspect.9 = unlist(lapply(aspect, FUN = function(x) quantile(x, probs = 0.9, na.rm = T)))
+
+
+iso = st_transform(iso, crs = st_crs(slope))
+slope = raster::extract(slope, iso, method = 'simple')
+iso$slope.1 = unlist(lapply(slope, FUN = function(x) quantile(x, probs = 0.1, na.rm = T)))
+iso$slope.5 = unlist(lapply(slope, FUN = function(x) median(x, na.rm = T)))
+iso$slope.9 = unlist(lapply(slope, FUN = function(x) quantile(x, probs = 0.9, na.rm = T)))
+
+st_geometry(iso) = NULL
+isochrons = isochrons |> 
+  left_join(iso)
+st_write(isochrons, paste0("isochrons_terrain_m2.gpkg"), delete_dsn = T)
