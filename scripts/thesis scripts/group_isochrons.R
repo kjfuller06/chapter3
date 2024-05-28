@@ -239,3 +239,94 @@ any(duplicated(fires.unique$ID))
 ## TRUE
 st_write(fires.unique, "isochrons_fireID_grouped.gpkg", delete_dsn = T)
 
+# merge small fires ####
+setwd("E:/chapter3/isochrons")
+isochrons = st_read("isochrons_fireID_grouped.gpkg")
+nrow(isochrons)
+## 121,432
+length(unique(isochrons$fireID))
+## 767
+nrow(isochrons |> filter(area < 1))
+## 69,099
+nrow(isochrons |> filter(area < 0.5))
+## 52,899
+summary(isochrons$progtime[isochrons$area < 1])
+## mean = 82 but there are definitely fires with shorter progression times
+backup = isochrons
+iso = isochrons
+iso$progtime2 = iso$progtime
+
+touching_list = readRDS("touchinglist.rds")
+
+ids = iso$ID[iso$area < 1]
+ids = unique(iso$fireID[iso$ID %in% ids])
+length(ids)
+## 493
+i = ids[1]
+for(i in ids){
+  iso.temp = iso |> 
+    filter(fireID == i)
+  id.temp = iso.temp$ID[iso.temp$area < 1]
+  
+  while(length(id.temp) > 0){
+    a = id.temp[1]
+    print(a)
+    iso.temp1 = iso.temp |> 
+      filter(ID == a)
+    touch.temp = isochrons[touching_list[[a]],]
+    if(nrow(touch.temp) > 0){
+      pre.temp = touch.temp |> filter(time == iso.temp1$lasttim)
+      if(nrow(pre.temp) > 0){
+        pre.temp2 = iso.temp1|> 
+          dplyr::select(geom) |> 
+          st_union(pre.temp)
+        pre.temp2$area = pre.temp$area + iso.temp1$area
+        pre.temp2$progtime2 = pre.temp$progtime + iso.temp1$progtime
+        iso[iso$ID == unique(pre.temp$ID),] = pre.temp2
+        iso = iso |> 
+          filter(ID != a)
+      }
+    }
+    id.temp = id.temp[id.temp != a]
+  }
+}
+nrow(iso)
+## 117,862
+length(unique(iso$ID))
+## 117,800
+length(unique(iso$fireID))
+## 765
+summary(iso)
+iso$progtime2[iso$progtime == 0] = 0
+
+dups = iso$ID[duplicated(iso$ID)]
+length(unique(dups))
+## 61
+iso.list = list()
+for(i in dups){
+  iso.temp = iso |> 
+    filter(ID == i)
+  iso.temp$progtime = max(iso.temp$progtime)
+  iso.temp$progtime2 = max(iso.temp$progtime2)
+  iso.temp$area = max(iso.temp$area)
+  iso.list[[i]] = iso.temp[!duplicated(iso.temp$ID),]
+}
+iso.list = bind_rows(iso.list)
+nrow(iso.list)
+## 61
+length(unique(iso.list$ID))
+## 61
+
+iso = iso[!(iso$ID %in% dups),]
+nrow(iso)
+## 117,739
+length(unique(iso$ID))
+## 117,739
+
+iso = rbind(iso, iso.list)
+nrow(iso)
+## 117,800
+length(unique(iso$ID))
+## 117,800
+st_write(iso, "isochrons_fireID_merged.gpkg", delete_dsn = T)
+
