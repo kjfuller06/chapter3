@@ -16,7 +16,7 @@ adj_list = readRDS("touchinglist.rds")
 
 tmap_mode("view")
 
-i = unique(iso$fireID)[3]
+# i = unique(iso$fireID)[3]
 isolist.ind = list()
 isolist.merged = list()
 counter = 1
@@ -213,7 +213,7 @@ for(i in unique(iso$fireID)){
       
       ids = ids[ids != a]
     }
-    beep()
+    # beep()
     
     # starting polygons
     iso.start = iso.temp |> 
@@ -239,6 +239,8 @@ for(i in unique(iso$fireID)){
     isolist.merged[[i]] = iso.b
   }
 }
+## Error: arguments have different crs
+## In addition: There were 50 or more warnings (use warnings() to see the first 50)
 isolist.ind = bind_rows(isolist.ind)
 saveRDS(isolist.ind, "isolist_ind.rds")
 isolist.merged = bind_rows(isolist.merged)
