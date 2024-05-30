@@ -16,7 +16,8 @@ adj_list = readRDS("touchinglist.rds")
 
 tmap_mode("view")
 
-# i = unique(iso$fireID)[3]
+# i = unique(iso$fireID)[1]
+startlist = list()
 isolist.ind = list()
 isolist.merged = list()
 counter = 1
@@ -27,15 +28,17 @@ for(i in unique(iso$fireID)){
   if(nrow(iso.temp) > 0){
     # using the convex hull, create lines extending from the convex hull border to the nearest point on the previous fire progression convex hull
     # identify the longest line from each combination of polygons. This is the direction of fire spread
-    iso.start = list()
     iso.a = list()
     iso.b = list()
+    # ids = c(21, 88, 100, 102)
     ids = unique(iso.temp$ID[iso.temp$progtime != 0])
+    # ids = ids[ids < 22]
+    # ids = 5
     while(length(ids) > 0){
       list.index = counter
       a = ids[1]
       
-      # for each starting polygon, identify each timestep increase in fire area
+      # for each polygon, identify previous timestep increase in fire area
       poly2 = iso.temp |> 
         filter(ID == a)
       poly2 = rbind(poly2, iso.temp[iso.temp$ID %in% unlist(adj_list[poly2$ID]),] |> 
@@ -44,11 +47,13 @@ for(i in unique(iso$fireID)){
       poly1.temp = iso.temp[iso.temp$ID %in% unlist(adj_list[poly2$ID]),] |> 
         filter(time == poly2$lasttim) 
       # time of final poly2 measurement is the same as previous polygon time recorded for poly1
-      ## in other words poly2 time leads to poly1 lasttim
+      ## in other words poly1 time leads to poly2 lasttim
       
       if(nrow(poly1.temp) > 0){
+        # final any additional polygons that could lead from poly1
         poly2.alt = iso.temp[iso.temp$ID %in% unlist(adj_list[poly1.temp$ID]),] |> 
-          filter(lasttim %in% poly1.temp$time)
+          filter(lasttim %in% poly1.temp$time) |> 
+          filter(time == poly2$time)
         
         # tm_shape(iso.temp) + tm_polygons() +
         #   tm_shape(poly1.temp) + tm_polygons(col = "darkblue") +
@@ -67,17 +72,24 @@ for(i in unique(iso$fireID)){
         poly1$area = as.numeric(st_area(poly1))
         
         # remove any starting polygons that have no shared fireline
-        fireline.final = 0
+        fireline.final = list()
+        poly2.alt$fireline = NA
         if(nrow(poly2.alt) > 1){
           for(x in c(1:nrow(poly2.alt))){
             pre.line = st_cast(st_intersection(poly1, poly2.alt[x,]))
-            fireline = as.numeric(sum(st_length(pre.line)))
-            if(fireline == 0){
-              poly2.alt = poly2.alt[-x,]
-            }
-            fireline.final = fireline.final + fireline
+            poly2.alt$fireline[x] = as.numeric(sum(st_length(pre.line)))
+            fireline.final[[x]] = poly2.alt$fireline[x]
           }
+          if(sum(unlist(fireline.final)) != 0 & any(unlist(fireline.final) == 0)){
+            poly2.alt = poly2.alt |> 
+              filter(fireline != 0)
+          }
+          fireline.final = sum(unlist(fireline.final))
+        } else {
+          pre.line = st_cast(st_intersection(poly1, poly2.alt))
+          fireline.final = as.numeric(sum(st_length(pre.line)))
         }
+        
         poly2 = poly2.alt
         poly2 = st_union(poly2)
         
@@ -105,7 +117,7 @@ for(i in unique(iso$fireID)){
         poly2.mrgd$area = as.numeric(st_area(poly2.mrgd))
         
         ids = ids[!ids %in% poly2.alt$ID]
-        iso.alt = do.call("rbind", replicate(length(poly2.alt$ID), poly2.mrgd, simplify = FALSE))
+        iso.alt = do.call("rbind", replicate(length(poly2.alt$ID), poly2.mrgd |> dplyr::select(-fireline), simplify = FALSE))
         iso.alt$ID = poly2.alt$ID
         iso.temp[iso.temp$ID %in% poly2.alt$ID,] = iso.alt
         
@@ -133,8 +145,8 @@ for(i in unique(iso$fireID)){
         
         # tm_shape(iso.temp) + tm_polygons() +
         #   tm_shape(poly2.poly) + tm_polygons(col = "darkred") +
-        #   tm_shape(poly1.poly) + tm_polygons(col = "darkblue") +
         #   tm_shape(poly2.mrgd) + tm_polygons(col = "red") +
+        #   tm_shape(poly1.poly) + tm_polygons(col = "darkblue") +
         #   tm_shape(poly1) + tm_polygons(col = "blue")
         
         if(!st_contains(poly1.poly, poly2.poly, sparse = F)){
@@ -168,7 +180,7 @@ for(i in unique(iso$fireID)){
             max1 = poly1.pt[c.df$index[c.df$distance == max(c.df$distance)],] |> 
               distinct()
             
-            sp.dir = unique(as.numeric(nngeo::st_azimuth(max1, max2)))
+            sp.dir = mean(unique(as.numeric(nngeo::st_azimuth(max1, max2))))
             poly2$spread.dir = sp.dir
             poly2$prepolyIDs = list(poly1$ID)
             poly2$fireline = fireline.final
@@ -178,6 +190,7 @@ for(i in unique(iso$fireID)){
             poly2.mrgd$fireline = fireline.final
             
             # linecheck1 = poly1.pt[c.df$index,]
+            # poly2.pt = poly2.pt |> dplyr::select(-fireline)
             # linecheck = list()
             # for(l in c(1:nrow(c.df))){
             #   linecheck2 = rbind(linecheck1[l,], poly2.pt[l,])
@@ -221,30 +234,31 @@ for(i in unique(iso$fireID)){
     iso.start$spread.dir = NA
     iso.start$prepolyIDs = NA
     iso.start$fireline = NA
+    startlist[[i]] = iso.start
     
-    # unmerged progression polygons
-    iso.a = bind_rows(iso.a)
-    iso.a = rbind(iso.start, iso.a)
+    if(length(iso.a) > 0){
+      # unmerged progression polygons
+      iso.a = bind_rows(iso.a)
+      isolist.ind[[i]] = iso.a
+    }
+    if(length(iso.b) > 0){
+      # merged progression polygons
+      iso.b = bind_rows(iso.b)
+      isolist.merged[[i]] = iso.b
+    }
     
-    # merged progression polygons
-    iso.b = bind_rows(iso.b)
-    iso.b = rbind(iso.start, iso.b)
-    
-    # tm_shape(iso.temp) + tm_polygons(col = "black") + 
+    # tm_shape(iso.temp) + tm_polygons(col = "black") +
     #   tm_shape(iso.b) + tm_polygons(col = "darkred") +
     #   tm_shape(iso.a) + tm_polygons(col = "red") +
     #   tm_shape(iso.start) + tm_polygons()
     
-    isolist.ind[[i]] = iso.a
-    isolist.merged[[i]] = iso.b
   }
 }
-## Error: arguments have different crs
-## In addition: There were 50 or more warnings (use warnings() to see the first 50)
-isolist.ind = bind_rows(isolist.ind)
-saveRDS(isolist.ind, "isolist_ind.rds")
-isolist.merged = bind_rows(isolist.merged)
-saveRDS(isolist.merged, "isolist_merged.rds")
+beep()
+isolist.ind1 = bind_rows(isolist.ind)
+saveRDS(isolist.ind1, "isolist_ind.rds")
+isolist.merged1 = bind_rows(isolist.merged)
+saveRDS(isolist.merged1, "isolist_merged.rds")
 
 # # calculate spread direction for adjacent polygons- starting polygons ####
 # setwd("E:/chapter3/isochrons")
