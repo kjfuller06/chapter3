@@ -10,7 +10,8 @@ setwd("E:/chapter3/isochrons")
 isochrons1 = readRDS("isolist_ind.rds")
 # isochrons1 = st_read("isochrons_prep1.gpkg")
 length(unique(isochrons1$ID))
-## 
+## 33,080
+length(unique(isochrons1$fireID))
 
 setwd("E:/chapter3/GEDI_FESM")
 # load data, create new polygons, intersecting the geometries of both
@@ -184,38 +185,9 @@ g.temp = full_join(isochrons, g.temp.12.5) |>
 setwd("E:/chapter3/for GAMs")
 st_write(iso.temp, "isolist_gedi_m1.gpkg", delete_dsn = T)
 
-# terrain ####
-setwd("D:/chapter1/data")
-slope = raster("proj_dem_slope_30m.tif")
-setwd("E:/chapter3")
-rough = raster("terrain_roughness.tif")
-
-setwd("E:/chapter3/for GAMs")
-isochrons = st_read("isolist_gedi_m1.gpkg")
-targetcrs = st_crs(isochrons)
-iso = isochrons |> 
-  dplyr::select(ID)
-
-iso = st_transform(iso, crs = st_crs(rough))
-rough = raster::extract(rough, iso, method = 'simple')
-iso$rough.1 = unlist(lapply(rough, FUN = function(x) quantile(x, probs = 0.1, na.rm = T)))
-iso$rough.5 = unlist(lapply(rough, FUN = function(x) median(x, na.rm = T)))
-iso$rough.9 = unlist(lapply(rough, FUN = function(x) quantile(x, probs = 0.9, na.rm = T)))
-
-iso = st_transform(iso, crs = st_crs(slope))
-slope = raster::extract(slope, iso, method = 'simple')
-iso$slope.1 = unlist(lapply(slope, FUN = function(x) quantile(x, probs = 0.1, na.rm = T)))
-iso$slope.5 = unlist(lapply(slope, FUN = function(x) median(x, na.rm = T)))
-iso$slope.9 = unlist(lapply(slope, FUN = function(x) quantile(x, probs = 0.9, na.rm = T)))
-
-st_geometry(iso) = NULL
-isochrons = isochrons |> 
-  left_join(iso)
-st_write(isochrons, paste0("isochrons_terrain_m2.gpkg"), delete_dsn = T)
-
 # fueltype ####
 setwd("E:/chapter3/for GAMs")
-isochrons = st_read("isochrons_terrain_m2.gpkg")
+isochrons = st_read("isolist_gedi_m1.gpkg")
 targetcrs = st_crs(isochrons)
 g = isochrons |> 
   dplyr::select(ID)
@@ -240,11 +212,11 @@ getmode = function(x){
 isochrons$fueltype = unlist(lapply(fueltype, getmode))
 
 setwd("E:/chapter3/for GAMs")
-st_write(isochrons, "isochrons_fueltype_m3.gpkg", delete_dsn = T)
+st_write(isochrons, "isolist_fueltype_m2.gpkg", delete_dsn = T)
 
 # barktype ####
 setwd("E:/chapter3/for GAMs")
-iso = st_read("isochrons_fueltype_m3.gpkg")
+iso = st_read("isolist_fueltype_m2.gpkg")
 targetcrs = st_crs(iso)
 g = iso |>
   dplyr::select(ID)
@@ -271,7 +243,7 @@ iso = iso |>
   left_join(g, by = "ID")
 
 setwd("E:/chapter3/for GAMs")
-st_write(iso, "isochrons_barktype_m4.gpkg", delete_dsn = T)
+st_write(iso, "isolist_barktype_m3.gpkg", delete_dsn = T)
 
 # LFMC ####
 setwd("E:/chapter3/original/from Rachael/R project/LFMC/LFMC/GEE_LFMC/LFMC_rasters/GEE_v20May2020_RevisedMask/")
@@ -281,7 +253,7 @@ lfmc$date = as.POSIXct(substr(lfmc$files, 6, 15), format = "%Y_%m_%d")
 ## using as.Date led to problems for this extraction but the severity data extraction did fine- double-checked
 
 setwd("E:/chapter3/for GAMs")
-iso = st_read("isochrons_barktype_m4.gpkg")
+iso = st_read("isolist_barktype_m3.gpkg")
 targetcrs = st_crs(iso)
 iso$poly_sD = as.POSIXct(iso$lasttim)
 iso$poly_eD = as.POSIXct(iso$time)
@@ -392,7 +364,7 @@ iso = iso |>
   left_join(g_temp, by = "ID")
 
 setwd("E:/chapter3/for GAMs")
-st_write(iso, "isochrons_LFMC_m5.gpkg", delete_dsn = T)
+st_write(iso, "isolist_LFMC_m4.gpkg", delete_dsn = T)
 
 # VPD ####
 setwd("E:/chapter3/original/from Rachael/VPD")
@@ -401,7 +373,7 @@ vpd = data.frame(files = vpd)
 vpd$date = as.POSIXct(substr(vpd$files, 5, 12), format = "%Y%m%d")
 
 setwd("E:/chapter3/for GAMs")
-iso = st_read("isochrons_LFMC_m5.gpkg")
+iso = st_read("isolist_LFMC_m4.gpkg")
 targetcrs = st_crs(iso)
 g = iso |> 
   dplyr::select(ID,
@@ -482,11 +454,11 @@ iso = iso |>
   left_join(g_temp, by = "ID")
 
 setwd("E:/chapter3/for GAMs")
-st_write(iso, "isochrons_VPD_m6.gpkg", delete_dsn = T)
+st_write(iso, "isolist_VPD_m5.gpkg", delete_dsn = T)
 
 # wind ####
 setwd("E:/chapter3/for GAMs")
-iso = st_read("isochrons_VPD_m6.gpkg")
+iso = st_read("isochrons_VPD_m5.gpkg")
 targetcrs = st_crs(iso)
 g = iso |>
   dplyr::select(ID,
@@ -616,57 +588,103 @@ for(i in c(1:length(unique(g_buffer$index)))){
 }
 g_temp = bind_rows(l)
 setwd("E:/chapter3/for GAMs")
-write.csv(g_temp, "wind_m7.csv", row.names = F)
+write.csv(g_temp, "wind_m6.csv", row.names = F)
 
 g_temp = g_temp |> 
   dplyr::select(-c(poly_sD, poly_eD, index))
 iso = iso |> 
   left_join(g_temp, by = "ID")
-st_write(iso, "isochrons_wind_m7.gpkg", delete_dsn = T)
+st_write(iso, "isochrons_wind_m6.gpkg", delete_dsn = T)
 
-# # strahler ####
-# setwd("E:/chapter3/for GAMs")
-# # iso = st_read("isochrons_withfireline_f1.gpkg")
-# iso = st_read("isochrons_wind_m7.gpkg")
-# targetcrs = st_crs(iso)
-# g = iso |> 
-#   dplyr::select(ID)
-# 
-# setwd("D:/chapter3/climatedem")
-# g.temp = list()
-# for(i in c(12:3)){
-#   i.temp = as.character(c(i:12))
-#   s_all = list()
-#   for(x in i.temp){
-#     s.temp = st_read(paste0("strahler", x, ".gpkg")) |> st_transform(crs = targetcrs)
-#     names(s.temp)[1:2] = c("cat", "value")
-#     s.temp$value = as.numeric(s.temp$value)
-#     s_all[[x]] = s.temp
-#   }
-#   s_all = bind_rows(s_all)
-#   
-#   s.temp = st_intersection(s_all, g)
-#   if(nrow(s.temp) > 0){
-#     s.temp$length = as.numeric(st_length(s.temp))
-#     st_geometry(s.temp) = NULL
-#     s.temp = aggregate(data = s.temp, length ~ ID, FUN = sum)
-#     s.temp$length[is.na(s.temp$length)] = 0
-#     names(s.temp)[2] = paste0("strahler", i)
-#     
-#     g.temp[[i]] = g |> 
-#       left_join(s.temp, by = "ID")
-#   }
-# }
-# g = bind_cols(g.temp)
-# g = g |> 
-#   dplyr::select(c(1, 2, 5, 8, 11, 14, 17, 20, 23))
-# names(g)[1] = "ID"
-# st_geometry(g) = NULL
-# iso = iso |> 
-#   left_join(g, by = "ID")
-# st_write(iso, paste0("isochrons_strahler_m8.gpkg"), delete_dsn = T)
-# ## many NaNs- should they be 0?
-# 
+## is wind direction related to spread direction? How similar are they? Note: wind direction will be opposite to intuitive
+
+# terrain ####
+setwd("D:/chapter1/data")
+slope = raster("proj_dem_slope_30m.tif")
+aspect = raster("proj_dem_aspect_30m.tif")
+elev = raster("proj_dem_s.tif")
+setwd("E:/chapter3")
+rough = raster("terrain_roughness.tif")
+
+setwd("E:/chapter3/for GAMs")
+isochrons = st_read("isolist_VPD_m5.gpkg")
+targetcrs = st_crs(isochrons)
+iso = isochrons |> 
+  dplyr::select(ID)
+
+iso = st_transform(iso, crs = st_crs(rough))
+rough = raster::extract(rough, iso, method = 'simple')
+iso$rough.1 = unlist(lapply(rough, FUN = function(x) quantile(x, probs = 0.1, na.rm = T)))
+iso$rough.5 = unlist(lapply(rough, FUN = function(x) median(x, na.rm = T)))
+iso$rough.9 = unlist(lapply(rough, FUN = function(x) quantile(x, probs = 0.9, na.rm = T)))
+
+iso = st_transform(iso, crs = st_crs(elev))
+elev = raster::extract(elev, iso, method = 'simple')
+iso$elev.1 = unlist(lapply(elev, FUN = function(x) quantile(x, probs = 0.1, na.rm = T)))
+iso$elev.5 = unlist(lapply(elev, FUN = function(x) median(x, na.rm = T)))
+iso$elev.9 = unlist(lapply(elev, FUN = function(x) quantile(x, probs = 0.9, na.rm = T)))
+
+## subtract spread direction from aspect, essentially re-orienting the slope to be north with respect to fire spread direction
+## NOTE: aspect direction points downslope!!
+iso = st_transform(iso, crs = st_crs(aspect))
+aspect = raster::extract(aspect, iso, method = 'simple')
+iso$aspect.1 = unlist(lapply(aspect, FUN = function(x) quantile(x, probs = 0.1, na.rm = T)))
+iso$aspect.5 = unlist(lapply(aspect, FUN = function(x) median(x, na.rm = T)))
+iso$aspect.9 = unlist(lapply(aspect, FUN = function(x) quantile(x, probs = 0.9, na.rm = T)))
+
+# convert aspect to "northness". This should indicate how well-oriented the spread direction is relative to slope. Upslope will be positive. Downslope will be negative.
+
+## divide slopes into up- versus down-slope. Mask 'slope' by each and extract separately
+
+iso = st_transform(iso, crs = st_crs(slope))
+slope = raster::extract(slope, iso, method = 'simple')
+iso$slope.1 = unlist(lapply(slope, FUN = function(x) quantile(x, probs = 0.1, na.rm = T)))
+iso$slope.5 = unlist(lapply(slope, FUN = function(x) median(x, na.rm = T)))
+iso$slope.9 = unlist(lapply(slope, FUN = function(x) quantile(x, probs = 0.9, na.rm = T)))
+
+## remove any slopes > 40 degrees?
+
+# wind-slope correction factors ####
+# Sharples 2008- eq 30, recommended in the Discussion section
+# U`ws = ||w|| sin(θw − γs)ˆt + (||w|| cos(θw − γs) + 150.98(tan γs)1.2)û
+
+## U`ws = slope-corrected effective wind speed
+## ||w|| = wind speed
+w = iso$windspeed
+## θw = wind direction
+thetaw = iso$winddir
+## γs = slope in degrees
+ys = slope
+## ˆt = indicates that this whole calculation represents the across-slope (t) spread rate of the fire
+## ˆu = indicates that this whole calculation represents the upslope-slope (u) spread rate of the fire
+
+wind.slope = w* sin(thetaw - ys) + (w* cos(thetaw - ys) + 150.98(tan(ys))*1.2)
+
+# other possible equations:
+# Sharples 2008- eq 6
+# R(w, γs) = Rw sin(θw −γa)ˆt +Rw cos(θw −γa) exp(0.069γs)û 
+
+## R(w, γs) = slope- and wind-induced rate of fire spread
+## Rw = wind-induced rate of fire spread
+## θw = wind direction
+## γa = slope aspect
+## ˆt = indicates that this whole calculation represents the across-slope (t) spread rate of the fire
+## γs = slope in degrees
+## ˆu = indicates that this whole calculation represents the upslope-slope (u) spread rate of the fire
+
+# Sharples 2008- eq 8
+# θR = γa + π/2 + tan^−1{cot(θw − γa) exp(0.069γs)}
+
+## θR = slope-corrected rate of spread vector relative to cardinal axes
+## γa = slope aspect
+## θw = wind direction
+## γs = slope in degrees
+
+st_geometry(iso) = NULL
+isochrons = isochrons |> 
+  left_join(iso)
+st_write(isochrons, paste0("isolist_terrain_m6.gpkg"), delete_dsn = T)
+
 # look at NaNs ####
 tmap_mode("view")
 setwd("E:/chapter3/for GAMs")
@@ -893,83 +911,3 @@ g$s4.only = g$strahler4.only/g$area
 
 setwd("E:/chapter3/for GAMs")
 st_write(g, "isochrons_prep4.gpkg", delete_dsn = T)
-
-# elevation ####
-setwd("D:/chapter1/data")
-elev = raster("proj_dem_s.tif")
-
-setwd("E:/chapter3/for GAMs")
-isochrons = st_read("isochrons_prep5.gpkg")
-length(unique(isochrons$ID))
-## 58,556
-targetcrs = st_crs(isochrons)
-iso = isochrons |> 
-  dplyr::select(ID)
-
-iso = st_transform(iso, crs = st_crs(elev))
-elev = raster::extract(elev, iso, method = 'simple')
-iso$elev.1 = unlist(lapply(elev, FUN = function(x) quantile(x, probs = 0.1, na.rm = T)))
-iso$elev.5 = unlist(lapply(elev, FUN = function(x) median(x, na.rm = T)))
-iso$elev.9 = unlist(lapply(elev, FUN = function(x) quantile(x, probs = 0.9, na.rm = T)))
-
-st_geometry(iso) = NULL
-isochrons = isochrons |> 
-  left_join(iso)
-st_write(isochrons, paste0("isochrons_prep6.gpkg"), delete_dsn = T)
-
-# wind alignment ####
-setwd("D:/chapter1/data")
-aspect = raster("proj_dem_aspect_30m.tif")
-backup = aspect
-aspect = backup
-slope = raster("proj_dem_slope_30m.tif")
-backup2 = slope
-slope = backup2
-st_crs(aspect) == st_crs(slope)
-## TRUE
-
-setwd("E:/chapter3/isochrons")
-iso2 = st_read("isochrons_withfireline_withspreaddir.gpkg")
-setwd("E:/chapter3/for GAMs")
-isochrons = st_read("isochrons_prep6.gpkg")
-nrow(isochrons)
-## 58,556
-st_geometry(iso2) = NULL
-isochrons = isochrons |> 
-  left_join(iso2) |> 
-  filter(!is.na(spreaddir))
-
-length(unique(isochrons$ID))
-## 56,194
-targetcrs = st_crs(isochrons)
-iso = isochrons |> 
-  dplyr::select(ID, spreaddir, winddir)
-
-iso = st_transform(iso, crs = st_crs(aspect))
-aspect = backup
-aspect = raster::extract(aspect, iso[1:10,], method = 'simple')
-slope = backup2
-slope = raster::extract(slope, iso[1:10,], method = 'simple')
-# types of alignment?
-## subtract winddir from slope aspect
-## subtract spreaddir from slope aspect
-## subtract winddir from spreaddir
-for(i in 1:length(aspect)){
-  iso.temp = iso[i,]
-  aspect[[i]] = (aspect[[i]] - iso.temp$winddir)*slope[[i]]
-}
-iso$aspect.1 = unlist(lapply(aspect, FUN = function(x) quantile(x, probs = 0.1, na.rm = T)))
-iso$aspect.5 = unlist(lapply(aspect, FUN = function(x) median(x, na.rm = T)))
-iso$aspect.9 = unlist(lapply(aspect, FUN = function(x) quantile(x, probs = 0.9, na.rm = T)))
-
-
-iso = st_transform(iso, crs = st_crs(slope))
-slope = raster::extract(slope, iso, method = 'simple')
-iso$slope.1 = unlist(lapply(slope, FUN = function(x) quantile(x, probs = 0.1, na.rm = T)))
-iso$slope.5 = unlist(lapply(slope, FUN = function(x) median(x, na.rm = T)))
-iso$slope.9 = unlist(lapply(slope, FUN = function(x) quantile(x, probs = 0.9, na.rm = T)))
-
-st_geometry(iso) = NULL
-isochrons = isochrons |> 
-  left_join(iso)
-st_write(isochrons, paste0("isochrons_terrain_m2.gpkg"), delete_dsn = T)
