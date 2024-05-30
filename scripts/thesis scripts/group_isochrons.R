@@ -330,3 +330,235 @@ length(unique(iso$ID))
 ## 117,800
 st_write(iso, "isochrons_fireID_merged.gpkg", delete_dsn = T)
 
+
+# clean fires ####
+setwd("E:/chapter3/isochrons")
+iso = st_read("isochrons_fireID_grouped.gpkg")
+nrow(iso)
+## 121,432
+# group by touching and date
+touching_list = readRDS("touchinglist.rds")
+
+backup = iso
+iso.update = iso
+
+iso.update$org.time = iso.update$time
+iso.update$org.lasttim = iso.update$lasttim
+
+options(warn=2)
+for(n in c(1:length(unique(iso.update$fireID)))){
+  fire1 = sort(unique(iso.update$fireID))[n]
+  
+  iso1 = iso.update |> 
+    filter(fireID == fire1)
+  
+  iso2 = iso.update[iso.update$ID %in% unique(unlist(touching_list[iso1$ID])),] |> 
+    filter(fireID != fire1)
+  # tm_shape(iso2) + tm_polygons() +
+  # tm_shape(iso1) + tm_polygons(col = "darkblue")
+  
+  while(nrow(iso2) > 0){
+    iso1 = iso.update |> 
+      filter(fireID == fire1)
+    
+    iso2 = iso.update[iso.update$ID %in% unique(unlist(touching_list[iso1$ID])),] |> 
+      filter(fireID != fire1)
+    print(paste0("fire ", fire1, " has ", length(unique(iso2$ID)), " potential neighbors"))
+    
+    i = iso2$ID[1]
+    for(i in iso2$ID){
+      iso.temp = iso2 |> 
+        filter(ID == i)
+      
+      lasttim.min = min(iso1$lasttim - days(14))
+      lasttim.max = max(iso1$lasttim + days(14))
+      time.min = min(iso1$time - days(14))
+      time.max = max(iso1$time + days(14))
+      
+      if((iso.temp$time < lasttim.max & iso.temp$time > lasttim.min) |
+         (iso.temp$lasttim < time.max & iso.temp$lasttim > time.min)){
+        print(paste0("polygon ", i, " belongs to fire ", fire1))
+        iso.update$fireID[iso.update$ID == iso.temp$ID] = fire1
+      }
+    }
+    
+    i = unique(iso2$fireID)[1]
+    for(i in unique(iso2$fireID)){
+      iso2.temp = iso2 |> 
+        filter(fireID == i)
+      
+      iso1.adj = iso1[unique(unlist(st_touches(iso2.temp, iso1))),]
+      iso2.adj = iso2[unique(unlist(st_touches(iso1.adj, iso2.temp))),]
+      
+      # tm_shape(iso1.adj) + tm_polygons(col = "darkblue") +
+      #   tm_shape(iso2.adj) + tm_polygons(col = "darkred")
+
+      if(any(iso1.adj$time %in% iso2.adj$lasttim) | any(iso1.adj$lasttim %in% iso2.adj$time)){
+        print(paste0("fire ", i, " is stitched together already; no need to change times"))
+      } else {
+        
+        x = unique(iso2.adj$ID)[9]
+        for(x in unique(iso2.adj$ID)){
+          iso.temp = iso2.adj |> 
+            filter(ID == x)
+          
+          lasttim.min = min(iso1$lasttim - days(1))
+          lasttim.max = max(iso1$lasttim + days(1))
+          time.min = min(iso1$time - days(1))
+          time.max = max(iso1$time + days(1))
+          
+          if(iso.temp$time < lasttim.max & iso.temp$time > lasttim.min){
+            iso1.temp = iso1[unlist(st_touches(iso.temp, iso1)),]
+            
+            lasttim.min.adj = min(iso1.temp$lasttim - days(1))
+            lasttim.max.adj = max(iso1.temp$lasttim + days(1))
+            
+            ## polygon time must align closely with the last time of an adjacent polygon
+            if(iso.temp$time < lasttim.max.adj & iso.temp$time > lasttim.min.adj){
+              subtime = unique(iso1.temp$lasttim[abs(as.numeric(difftime(iso.temp$time, iso1.temp$lasttim))) == min(abs(as.numeric(difftime(iso.temp$time, iso1.temp$lasttim))))])
+              
+              if(subtime == 0){
+                print(paste0("polygon ", x, " lasttim fits already"))
+              } else {
+                print(paste0("polygon ", x, " lasttim is similar enough to update"))
+              }
+              
+              iso.update$lasttim[iso.update$ID == x] = subtime
+            } else if(iso.temp$lasttim < time.max & iso.temp$lasttim > time.min){
+              iso1.temp = iso1[unlist(st_touches(iso.temp, iso1)),]
+              
+              time.min.adj = min(iso1.temp$time - days(1))
+              time.max.adj = max(iso1.temp$time + days(1))
+              
+              ## polygon lasttim must align closely with the time of an adjacent polygon
+              if(iso.temp$lasttim < time.max.adj & iso.temp$lasttim > time.min.adj){
+                subtime = unique(iso1.temp$time[abs(as.numeric(difftime(iso.temp$lasttim, iso1.temp$time))) == min(abs(as.numeric(difftime(iso.temp$lasttim, iso1.temp$time))))])
+                
+                if(subtime == 0){
+                  print(paste0("polygon ", x, " time fits already"))
+                } else {
+                  print(paste0("polygon ", x, " time is similar enough to update"))
+                }
+                
+                iso.update$time[iso.update$ID == x] = subtime
+                
+              }
+            } 
+          }
+        }
+      }
+    }
+  }
+}
+## "fire 12092 has 2 potential neighbors" stuck on repeat
+nrow(iso.update)
+## 121,432
+length(unique(iso.update$ID))
+## 121,432
+length(unique(iso$fireID))
+##
+length(unique(iso.update$fireID))
+## 764
+
+# group by proximity and date
+iso1 = iso.update |> 
+  filter(fireID == fire1)
+iso3 = st_union(iso1) |> 
+  st_buffer(dist = 1000)
+iso3 = st_intersection(iso.update, iso3) |> 
+  filter(!ID %in% iso1$ID & !ID %in% iso2$ID)
+
+tm_shape(iso3) + tm_polygons() +
+  tm_shape(iso1) + tm_polygons(col = "darkblue")
+fire1
+
+for(i in iso3$ID){
+  iso.temp = iso3 |> 
+    filter(ID == i)
+  
+  lasttim.min = min(iso1$lasttim - days(14))
+  lasttim.max = max(iso1$lasttim + days(14))
+  time.min = min(iso1$time - days(14))
+  time.max = max(iso1$time + days(14))
+  
+  if(iso.temp$time < lasttim.max & iso.temp$time > lasttim.min){
+    print(paste0("polygon ", i, " belongs to fire ", fire1))
+    iso.update$fireID[iso.update$ID == iso.temp$ID] = fire1
+  }
+}
+
+saveRDS(iso.update, "isochrons_fireID_grouped2.rds")
+## merge back the original isochrons time and lasttim before writing
+# st_geometry(iso) = NULL
+# iso = iso |> 
+#   dplyr::select(ID, time, lasttim)
+# names(iso) = c("ID", "org.time", "org.lasttim")
+# 
+# iso.update = left_join(iso.update, iso)
+nrow(iso.update)
+##
+length(unique(iso.update$ID))
+##
+length(unique(iso.update$fireID))
+iso.update$fireID = as.factor(iso.update$fireID)
+levels(iso.update$fireID) = c(1:length(unique(iso.update$fireID)))
+
+## use org.time and org.lasttim to extract data but use time and lasttim to track fire progression
+saveRDS(iso.update, "isochrons_fireID_grouped2.gpkg", delete_dsn = T)
+
+# # manual grouping ####
+# iso$fireID[iso$fireID == 25] = 34
+# iso$fireID[iso$fireID == 41] = 34
+# iso$fireID[iso$fireID == 69] = 34
+# iso$fireID[iso$fireID == 70] = 34
+# iso$fireID[iso$fireID == 116] = 34
+# iso$fireID[iso$fireID == 436] = 471
+# iso$fireID[iso$fireID == 471] = 770
+# ## fireID 355 and 1429 very close together but separated by ~3 mo
+# iso$fireID[iso$fireID == 608] = 355
+# iso$fireID[iso$fireID == 620] = 355
+# iso$fireID[iso$fireID == 1078] = 355
+# iso$fireID[iso$fireID == 1164] = 355
+# iso$fireID[iso$fireID == 1216] = 355
+# iso$fireID[iso$fireID == 9929] = 1429
+# iso$fireID[iso$fireID == 10145] = 1429
+# iso$fireID[iso$fireID == 9768] = 1429
+# iso$fireID[iso$fireID == 9579] = 1429
+# ## fireID 12298 and 1429 touch but are separated by ~1 mo
+# iso$fireID[iso$fireID == 1342] = 1429
+# iso$fireID[iso$fireID == 1368] = 1429
+# iso$fireID[iso$fireID == 1541] = 1429
+# iso$fireID[iso$fireID == 2692] = 2766
+# iso$fireID[iso$fireID == 3170] = 3139
+# iso$fireID[iso$fireID == 3171] = 3139
+# iso$fireID[iso$fireID == 3131] = 1429
+# iso$fireID[iso$fireID == 3268] = 1429
+# iso$fireID[iso$fireID == 3311] = 1429
+# iso$fireID[iso$fireID == 3455] = 3505
+# iso$fireID[iso$fireID == 4559] = 3505
+# iso$fireID[iso$fireID == 4906] = 3505
+# iso$fireID[iso$fireID == 5202] = 3505
+# iso$fireID[iso$fireID == 5422] = 3505
+# iso$fireID[iso$fireID == 5683] = 3505
+# iso$fireID[iso$fireID == 6212] = 3505
+# iso$fireID[iso$fireID == 5568] = 3505
+# iso$fireID[iso$fireID == 4967] = 3505
+# iso$fireID[iso$fireID == 6212] = 3505
+# iso$fireID[iso$fireID == 3515] = 1429
+# iso$fireID[iso$fireID == 3550] = 1429
+# iso$fireID[iso$fireID == 3640] = 1429
+# iso$fireID[iso$fireID == 3776] = 1429
+# iso$fireID[iso$fireID == 3794] = 1429
+# iso$fireID[iso$fireID == 3942] = 1429
+# iso$fireID[iso$fireID == 3816] = 1429
+# iso$fireID[iso$fireID == 4010] = 1429
+# iso$fireID[iso$fireID == 4026] = 1429
+# iso$fireID[iso$fireID == 4496] = 1429
+# iso$fireID[iso$fireID == 4606] = 1429
+# iso$fireID[iso$fireID == 4607] = 1429
+# iso$fireID[iso$fireID == 4615] = 1429
+# iso$fireID[iso$fireID == 4654] = 1429
+# iso$fireID[iso$fireID == 4656] = 1429
+# iso$fireID[iso$fireID == 4824] = 1429
+# iso$fireID[iso$fireID == 4946] = 1429
+# iso$fireID[iso$fireID == 5375] = 1429
