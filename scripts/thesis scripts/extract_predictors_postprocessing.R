@@ -4,20 +4,83 @@ library(tidyverse)
 library(exactextractr)
 library(rgeos)
 library(tmap)
+library(beepr)
+
+# combine isochrons data ####
+setwd("E:/chapter3/isochrons")
+isochrons2 = st_read("isochrons_fireID_grouped2.gpkg")
+st_geometry(isochrons2) = NULL
+isochrons2 = isochrons2 |> 
+  dplyr::select(ID, fireID)
+isochrons2$fireID = as.factor(isochrons2$fireID)
+nrow(isochrons2)
+## 121,432
+length(unique(isochrons2$fireID))
+## 339
+
+# individual isochrons
+isochrons = readRDS("isolist_ind.rds")
+# isochrons = st_read("isochrons_prep1.gpkg")
+length(unique(isochrons$ID))
+## 33,080
+length(unique(isochrons$fireID))
+## 284
+isochrons = isochrons |> 
+  dplyr::select(-fireID)
+
+isochrons = isochrons |> 
+  inner_join(isochrons2)
+length(unique(isochrons$ID))
+## 33,080
+length(unique(isochrons$fireID))
+## 129
+
+isochrons.ids = isochrons |> 
+  dplyr::select(ID, fireID, prepolyIDs)
+saveRDS(isochrons.ids, "isolist_ind_groupingsfinal.rds")
+
+isochrons = isochrons |> 
+  dplyr::select(-prepolyIDs)
+st_write(isochrons, "isochrons_ind_forextraction.gpkg", delete_dsn = T)
+
+# merged isochrons
+isochrons.merged = readRDS("isolist_merged.rds")
+# isochrons.merged = st_read("isochrons_prep1.gpkg")
+length(unique(isochrons.merged$ID))
+## 33,080
+length(unique(isochrons.merged$fireID))
+## 284
+isochrons.merged = isochrons.merged |> 
+  dplyr::select(-fireID)
+
+isochrons.merged = isochrons.merged |> 
+  inner_join(isochrons2)
+length(unique(isochrons.merged$ID))
+## 33,080
+length(unique(isochrons.merged$fireID))
+## 129
+
+isochrons.merged.ids = isochrons.merged |> 
+  dplyr::select(ID, fireID, prepolyIDs)
+saveRDS(isochrons.merged.ids, "isolist_merged_groupingsfinal.rds")
+
+isochrons.merged = isochrons.merged |> 
+  dplyr::select(-prepolyIDs)
+st_write(isochrons.merged, "isochrons_merged_forextraction.gpkg", delete_dsn = T)
 
 # GEDI ####
 setwd("E:/chapter3/isochrons")
-isochrons1 = readRDS("isolist_ind.rds")
-# isochrons1 = st_read("isochrons_prep1.gpkg")
-length(unique(isochrons1$ID))
+isochrons = st_read("isochrons_ind_forextraction.gpkg")
+length(unique(isochrons$ID))
 ## 33,080
-length(unique(isochrons1$fireID))
+length(unique(isochrons$fireID))
+## 129
 
 setwd("E:/chapter3/GEDI_FESM")
 # load data, create new polygons, intersecting the geometries of both
 gedi = st_read("ch3_FESMandfhist_forpoly.gpkg")
 targetcrs = st_crs(gedi)
-gedi = st_transform(gedi, st_crs(isochrons1))
+gedi = st_transform(gedi, st_crs(isochrons))
 nrow(gedi)
 ## 110,897
 
@@ -25,7 +88,7 @@ gedi$TUF = as.numeric(difftime(max(isochrons$time), gedi$DateTime, units = "days
 gedi = gedi |>
   filter(TUF > 0)
 nrow(gedi)
-## 108,172
+## 109,787
 
 # 12.5 m
 g_buffer = st_buffer(gedi, dist = 12.5)
@@ -54,7 +117,7 @@ g.temp.12.5 = g.temp |>
   left_join(g_agg4) |>
   left_join(g_agg5)
 nrow(g.temp.12.5)
-## 4,287
+## 5,683
 g.temp = isochrons |> 
   dplyr::select(ID)
 g.temp = full_join(g.temp, g.temp.12.5)
@@ -89,7 +152,7 @@ g.temp.25 = g.temp |>
   left_join(g_agg4) |>
   left_join(g_agg5)
 nrow(g.temp.25)
-## 4,626, an increase of 339 shots over buffer of 12.5 m
+## 5,924
 g.temp = isochrons |> 
   dplyr::select(ID)
 g.temp = full_join(g.temp, g.temp.25)
@@ -124,7 +187,7 @@ g.temp.100 = g.temp |>
   left_join(g_agg4) |>
   left_join(g_agg5)
 nrow(g.temp.100)
-## 6,745, an increase of 2,458 shots over a buffer of 12.5 m
+## 7,250
 g.temp = isochrons |> 
   dplyr::select(ID)
 g.temp = full_join(g.temp, g.temp.100)
@@ -159,7 +222,7 @@ g.temp.1000 = g.temp |>
   left_join(g_agg4) |>
   left_join(g_agg5)
 nrow(g.temp.1000)
-## 21,854, an increase of 17,567 shots over a buffer of 12.5 m
+## 27
 g.temp = isochrons |> 
   dplyr::select(ID)
 g.temp = full_join(g.temp, g.temp.1000)
@@ -183,7 +246,7 @@ g.temp = full_join(isochrons, g.temp.12.5) |>
   left_join(g.temp.1000)
 
 setwd("E:/chapter3/for GAMs")
-st_write(iso.temp, "isolist_gedi_m1.gpkg", delete_dsn = T)
+st_write(g.temp, "isolist_gedi_m1.gpkg", delete_dsn = T)
 
 # fueltype ####
 setwd("E:/chapter3/for GAMs")
@@ -458,8 +521,12 @@ st_write(iso, "isolist_VPD_m5.gpkg", delete_dsn = T)
 
 # wind ####
 setwd("E:/chapter3/for GAMs")
-iso = st_read("isochrons_VPD_m5.gpkg")
-targetcrs = st_crs(iso)
+iso = st_read("isolist_VPD_m5.gpkg")
+# iso = iso[1:100,]
+
+# setwd("E:/chapter3/for GAMs")
+# iso = st_read("isochrons_VPD_m5.gpkg")
+# targetcrs = st_crs(iso)
 g = iso |>
   dplyr::select(ID,
                 poly_sD,
@@ -606,11 +673,19 @@ elev = raster("proj_dem_s.tif")
 setwd("E:/chapter3")
 rough = raster("terrain_roughness.tif")
 
+st_crs(slope) == st_crs(aspect)
+## TRUE
+st_crs(slope) == st_crs(elev)
+## TRUE
+st_crs(slope) == st_crs(rough)
+## TRUE
+
 setwd("E:/chapter3/for GAMs")
-isochrons = st_read("isolist_VPD_m5.gpkg")
+isochrons = st_read("isochrons_wind_m6.gpkg")
 targetcrs = st_crs(isochrons)
-iso = isochrons |> 
-  dplyr::select(ID)
+isochrons = st_transform(isochrons, crs = st_crs(aspect))
+iso = isochrons |>
+  dplyr::select(ID, spread.dir, winddir, windspeed)
 
 iso = st_transform(iso, crs = st_crs(rough))
 rough = raster::extract(rough, iso, method = 'simple')
@@ -626,59 +701,75 @@ iso$elev.9 = unlist(lapply(elev, FUN = function(x) quantile(x, probs = 0.9, na.r
 
 ## subtract spread direction from aspect, essentially re-orienting the slope to be north with respect to fire spread direction
 ## NOTE: aspect direction points downslope!!
-iso = st_transform(iso, crs = st_crs(aspect))
-aspect = raster::extract(aspect, iso, method = 'simple')
-iso$aspect.1 = unlist(lapply(aspect, FUN = function(x) quantile(x, probs = 0.1, na.rm = T)))
-iso$aspect.5 = unlist(lapply(aspect, FUN = function(x) median(x, na.rm = T)))
-iso$aspect.9 = unlist(lapply(aspect, FUN = function(x) quantile(x, probs = 0.9, na.rm = T)))
+Mode <- function(x) {
+  ux <- unique(x)
+  ux[which.max(tabulate(match(x, ux)))]
+}
 
-# convert aspect to "northness". This should indicate how well-oriented the spread direction is relative to slope. Upslope will be positive. Downslope will be negative.
+i = unique(isochrons$ID)[1]
+iso.list = list()
+for(i in unique(isochrons$ID)){
+  iso.temp = isochrons |> 
+    filter(ID == i)
+  aspect.temp = raster::extract(aspect, iso.temp, method = 'simple')
+  slope.temp = raster::extract(slope, iso.temp, method = 'simple')
+  
+  # reorient slope aspect relative to fire spread direction
+  aspect.temp[[1]] = aspect.temp[[1]] - iso.temp$spread.dir
+  
+  # reorient wind direction relative to spread direction
+  iso.temp$winddir2 = iso.temp$winddir - iso.temp$spread.dir
+  
+  # correct slope aspects that are negative relative to spread direction
+  vect = aspect.temp[[1]] > 90 & aspect.temp[[1]] < 270
+  slope.temp[[1]][vect] = -slope.temp[[1]][vect]
+  
+  # calculate the net effective wind vector in the t and u directions
+  w.s.speed = iso.temp$windspeed* sin(iso.temp$winddir2*pi/180 - aspect.temp[[1]]*pi/180) + 
+              iso.temp$windspeed* cos(iso.temp$winddir2*pi/180 - aspect.temp[[1]]*pi/180)
+  slopecorrection = 150.98*tan(abs(slope.temp[[1]])*pi/180)^1.2
+  slopecorrection[vect] = -slopecorrection[vect]
+  w.s.speed = w.s.speed + slopecorrection
+  
+  iso.temp$w.s.speed = Mode(w.s.speed)
+  iso.temp$slope = Mode(slope.temp[[1]])
+  iso.temp$aspect = Mode(aspect.temp[[1]])
+  
+  iso.list[[i]] = iso.temp
+}
+iso = bind_rows(iso.list)
 
-## divide slopes into up- versus down-slope. Mask 'slope' by each and extract separately
-
-iso = st_transform(iso, crs = st_crs(slope))
-slope = raster::extract(slope, iso, method = 'simple')
-iso$slope.1 = unlist(lapply(slope, FUN = function(x) quantile(x, probs = 0.1, na.rm = T)))
-iso$slope.5 = unlist(lapply(slope, FUN = function(x) median(x, na.rm = T)))
-iso$slope.9 = unlist(lapply(slope, FUN = function(x) quantile(x, probs = 0.9, na.rm = T)))
+# iso$windspeed.cat = NA
+# iso$windspeed.cat[iso$windspeed <= 10] = "low"
+# iso$windspeed.cat[iso$windspeed > 10 & iso$windspeed < 30] = "moderate"
+# iso$windspeed.cat[iso$windspeed >= 30] = "high"
+# iso$windspeed.cat = factor(iso$windspeed.cat, levels = c("low",
+#                                                              "moderate",
+#                                                              "high"))
+# 
+# iso$aspect.cat = NA
+# iso$aspect.cat[iso$aspect > 90 & iso$aspect < 270] = "against"
+# iso$aspect.cat[iso$aspect <= 90 | iso$aspect >= 270] = "with"
+# 
+# iso$slope.cat = NA
+# iso$slope.cat[iso$slope >= 0] = "upslope"
+# iso$slope.cat[iso$slope < 0] = "downslope"
+# 
+# iso$winddir.cat = NA
+# iso$winddir.cat[iso$winddir > 90 & iso$winddir < 270] = "against"
+# iso$winddir.cat[iso$winddir <= 90 | iso$winddir >= 270] = "with"
+# 
+# ggplot(iso, aes(x = slope, y = w.s.speed)) +
+#   geom_point(aes(col = winddir.cat)) +
+#   geom_smooth(method = "lm", aes(col = winddir.cat))
+# ggplot(iso, aes(x = winddir, y = w.s.speed)) +
+#   geom_point(aes(col = aspect)) +
+#   scale_x_continuous(breaks = c(0, 90, 180, 270, 360)) + 
+#   facet_wrap(facets = "windspeed.cat")
+# ggplot(iso, aes(x = windspeed, y = w.s.speed)) +
+#   geom_point(aes(col = winddir.cat))
 
 ## remove any slopes > 40 degrees?
-
-# wind-slope correction factors ####
-# Sharples 2008- eq 30, recommended in the Discussion section
-# U`ws = ||w|| sin(θw − γs)ˆt + (||w|| cos(θw − γs) + 150.98(tan γs)1.2)û
-
-## U`ws = slope-corrected effective wind speed
-## ||w|| = wind speed
-w = iso$windspeed
-## θw = wind direction
-thetaw = iso$winddir
-## γs = slope in degrees
-ys = slope
-## ˆt = indicates that this whole calculation represents the across-slope (t) spread rate of the fire
-## ˆu = indicates that this whole calculation represents the upslope-slope (u) spread rate of the fire
-
-wind.slope = w* sin(thetaw - ys) + (w* cos(thetaw - ys) + 150.98(tan(ys))*1.2)
-
-# other possible equations:
-# Sharples 2008- eq 6
-# R(w, γs) = Rw sin(θw −γa)ˆt +Rw cos(θw −γa) exp(0.069γs)û 
-
-## R(w, γs) = slope- and wind-induced rate of fire spread
-## Rw = wind-induced rate of fire spread
-## θw = wind direction
-## γa = slope aspect
-## ˆt = indicates that this whole calculation represents the across-slope (t) spread rate of the fire
-## γs = slope in degrees
-## ˆu = indicates that this whole calculation represents the upslope-slope (u) spread rate of the fire
-
-# Sharples 2008- eq 8
-# θR = γa + π/2 + tan^−1{cot(θw − γa) exp(0.069γs)}
-
-## θR = slope-corrected rate of spread vector relative to cardinal axes
-## γa = slope aspect
-## θw = wind direction
-## γs = slope in degrees
 
 st_geometry(iso) = NULL
 isochrons = isochrons |> 
