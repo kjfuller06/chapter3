@@ -5,7 +5,262 @@ library(tmap)
 library(FNN)
 library(beepr)
 
-# calculate spread direction for adjacent polygons- ending polygons ####
+# # calculate spread direction for adjacent polygons- ending polygons ####
+# setwd("E:/chapter3/isochrons")
+# iso = st_read("isochrons_fireID_grouped.gpkg")
+# nrow(iso)
+# ## 121,432
+# targetcrs = st_crs(iso)
+# 
+# adj_list = readRDS("touchinglist.rds")
+# 
+# tmap_mode("view")
+# 
+# # i = unique(iso$fireID)[1]
+# startlist = list()
+# isolist.ind = list()
+# isolist.merged = list()
+# counter = 1
+# for(i in unique(iso$fireID)){
+#   iso.temp = iso |> 
+#     filter(fireID == i)
+#   
+#   if(nrow(iso.temp) > 0){
+#     # using the convex hull, create lines extending from the convex hull border to the nearest point on the previous fire progression convex hull
+#     # identify the longest line from each combination of polygons. This is the direction of fire spread
+#     iso.a = list()
+#     iso.b = list()
+#     # ids = c(21, 88, 100, 102)
+#     ids = unique(iso.temp$ID[iso.temp$progtime != 0])
+#     # ids = ids[ids < 22]
+#     # ids = 5
+#     while(length(ids) > 0){
+#       list.index = counter
+#       a = ids[1]
+#       
+#       # for each polygon, identify previous timestep increase in fire area
+#       poly2 = iso.temp |> 
+#         filter(ID == a)
+#       poly2 = rbind(poly2, iso.temp[iso.temp$ID %in% unlist(adj_list[poly2$ID]),] |> 
+#                       filter(time == poly2$time & lasttim == poly2$lasttim))
+#       
+#       poly1.temp = iso.temp[iso.temp$ID %in% unlist(adj_list[poly2$ID]),] |> 
+#         filter(time == poly2$lasttim) 
+#       # time of final poly2 measurement is the same as previous polygon time recorded for poly1
+#       ## in other words poly1 time leads to poly2 lasttim
+#       
+#       if(nrow(poly1.temp) > 0){
+#         # final any additional polygons that could lead from poly1
+#         poly2.alt = iso.temp[iso.temp$ID %in% unlist(adj_list[poly1.temp$ID]),] |> 
+#           filter(lasttim %in% poly1.temp$time) |> 
+#           filter(time == poly2$time)
+#         
+#         # tm_shape(iso.temp) + tm_polygons() +
+#         #   tm_shape(poly1.temp) + tm_polygons(col = "darkblue") +
+#         #   tm_shape(poly2.alt) + tm_polygons(col = "red") +
+#         #   tm_shape(poly2) + tm_polygons(col = "darkred")
+#         
+#         poly1 = st_union(poly1.temp) |> 
+#           st_as_sf()
+#         st_geometry(poly1.temp) = NULL
+#         poly1 = cbind(poly1, poly1.temp[1,])
+#         names(poly1)[names(poly1) == "x"] = "geom"
+#         st_geometry(poly1) = "geom"
+#         
+#         poly1$ID = counter
+#         counter = counter + 1
+#         poly1$area = as.numeric(st_area(poly1))
+#         
+#         # remove any starting polygons that have no shared fireline
+#         fireline.final = list()
+#         poly2.alt$fireline = NA
+#         if(nrow(poly2.alt) > 1){
+#           for(x in c(1:nrow(poly2.alt))){
+#             pre.line = st_cast(st_intersection(poly1, poly2.alt[x,]))
+#             poly2.alt$fireline[x] = as.numeric(sum(st_length(pre.line)))
+#             fireline.final[[x]] = poly2.alt$fireline[x]
+#           }
+#           if(sum(unlist(fireline.final)) != 0 & any(unlist(fireline.final) == 0)){
+#             poly2.alt = poly2.alt |> 
+#               filter(fireline != 0)
+#           }
+#           fireline.final = sum(unlist(fireline.final))
+#         } else {
+#           pre.line = st_cast(st_intersection(poly1, poly2.alt))
+#           fireline.final = as.numeric(sum(st_length(pre.line)))
+#         }
+#         
+#         poly2 = poly2.alt
+#         poly2 = st_union(poly2)
+#         
+#         st_geometry(poly2.alt) = NULL
+#         poly2 = cbind(poly2, poly2.alt[1,])
+#         names(poly2)[names(poly2) == "geometry"] = "geom"
+#         st_geometry(poly2) = "geom"
+#         
+#         poly2$ID = counter
+#         counter = counter + 1
+#         poly2$area = as.numeric(st_area(poly2))
+#         
+#         # union geometries between starting polygon and next polygon
+#         poly2.mrgd = poly1 |> 
+#           dplyr::select(geom) |> 
+#           st_union() |> 
+#           st_union(poly2) |> 
+#           st_as_sf()
+#         
+#         poly2.mrgd = cbind(poly2.mrgd, poly2.alt[1,])
+#         names(poly2.mrgd)[names(poly2.mrgd) == "x"] = "geom"
+#         st_geometry(poly2.mrgd) = "geom"
+#         
+#         poly2.mrgd$ID = unique(poly2$ID)
+#         poly2.mrgd$area = as.numeric(st_area(poly2.mrgd))
+#         
+#         ids = ids[!ids %in% poly2.alt$ID]
+#         iso.alt = do.call("rbind", replicate(length(poly2.alt$ID), poly2.mrgd |> dplyr::select(-fireline), simplify = FALSE))
+#         iso.alt$ID = $ID
+#         iso.temp[iso.temp$ID %in% $ID,] = iso.alt
+#         
+#         # tm_shape(iso.temp) + tm_polygons() +
+#         #   tm_shape(poly2.mrgd) + tm_polygons(col = "darkred") +
+#         #   tm_shape(poly2) + tm_polygons(col = "red") +
+#         #   tm_shape(poly1) + tm_polygons(col = "darkblue")
+#         
+#         # for each timestep in fire growth, convert polygons to points and calculate a convex hull for each
+#         poly1.pt = st_cast(poly1, "POINT")
+#         poly1.poly = as.matrix(st_coordinates(poly1.pt))
+#         ch <- chull(poly1.poly)
+#         ch <- poly1.poly[c(ch, ch[1]), ]
+#         poly1.poly = st_as_sf(as.data.frame(ch), coords = c("X", "Y"), crs = targetcrs) |> 
+#           summarise(geom = st_combine(geometry)) %>%
+#           st_cast("POLYGON")
+#         
+#         poly2.pt = st_cast(poly2.mrgd, "POINT")
+#         poly2.poly = as.matrix(st_coordinates(poly2.pt))
+#         ch <- chull(poly2.poly)
+#         ch <- poly2.poly[c(ch, ch[1]), ]
+#         poly2.poly = st_as_sf(as.data.frame(ch), coords = c("X", "Y"), crs = targetcrs) |> 
+#           summarise(geom = st_combine(geometry)) %>%
+#           st_cast("POLYGON")
+#         
+#         # tm_shape(iso.temp) + tm_polygons() +
+#         #   tm_shape(poly2.poly) + tm_polygons(col = "darkred") +
+#         #   tm_shape(poly2.mrgd) + tm_polygons(col = "red") +
+#         #   tm_shape(poly1.poly) + tm_polygons(col = "darkblue") +
+#         #   tm_shape(poly1) + tm_polygons(col = "blue")
+#         
+#         if(!st_contains(poly1.poly, poly2.poly, sparse = F)){
+#           # sample points on  polygon edge 100 m apart at most
+#           poly1.pt = poly1.poly |> 
+#             st_segmentize(dfMaxLength = 100) %>% 
+#             st_coordinates() %>% 
+#             as.data.frame() %>% 
+#             select(X, Y) %>% 
+#             st_as_sf(coords = c("X", "Y"), crs = targetcrs)
+#           poly2.pt = poly2.poly |> 
+#             st_segmentize(dfMaxLength = 100) %>% 
+#             st_coordinates() %>% 
+#             as.data.frame() %>% 
+#             select(X, Y) %>% 
+#             st_as_sf(coords = c("X", "Y"), crs = targetcrs)
+#           
+#           tryCatch({
+#             # calculate minimum distance from 1) points on second polygon back to 2) points on starting polygon
+#             c<-get.knnx(as.matrix(st_coordinates(poly1.pt)), as.matrix(st_coordinates(poly2.pt)), k = 1)
+#             c.index = c[[1]]
+#             c.dist = c[[2]]
+#             c.df = data.frame(index = c[[1]],
+#                               distance = c[[2]])
+#             c.df |> 
+#               filter(distance == max(c.df$distance))
+#             which(c.df$distance == max(c.df$distance))
+#             
+#             max2 = poly2.pt[which(c.df$distance == max(c.df$distance)),] |> 
+#               distinct()
+#             max1 = poly1.pt[c.df$index[c.df$distance == max(c.df$distance)],] |> 
+#               distinct()
+#             
+#             sp.dir = mean(unique(as.numeric(nngeo::st_azimuth(max1, max2))))
+#             poly2$spread.dir = sp.dir
+#             poly2$prepolyIDs = list(poly1$ID)
+#             poly2$fireline = fireline.final
+#             
+#             poly2.mrgd$spread.dir = sp.dir
+#             poly2.mrgd$prepolyIDs = list(poly1$ID)
+#             poly2.mrgd$fireline = fireline.final
+#             
+#             linecheck1 = poly1.pt[c.df$index,]
+#             poly2.pt = poly2.pt |> dplyr::select(-fireline)
+#             linecheck = list()
+#             for(l in c(1:nrow(c.df))){
+#               linecheck2 = rbind(linecheck1[l,], poly2.pt[l,])
+#               if(linecheck2[1,] != linecheck2[2,]){
+#                 linecheck[[l]] = linecheck2 |>
+#                   group_by() |>
+#                   summarize() |>
+#                   st_cast("LINESTRING")
+#               }
+#             }
+#             linecheck = bind_rows(linecheck)
+#             linecheck$ID = c(1:nrow(linecheck))
+# 
+#             tm_shape(iso.temp) + tm_polygons() +
+#               tm_shape(poly2.mrgd) + tm_polygons(col = "darkred") +
+#               tm_shape(poly2.pt) + tm_dots(col = "red") +
+#               tm_shape(poly1.pt) + tm_dots(col = "blue") +
+#               tm_shape(poly1) + tm_polygons(col = "darkblue") +
+#               tm_shape(max2) + tm_dots() +
+#               tm_shape(max1) + tm_dots() +
+#               tm_shape(linecheck) + tm_lines(col = "ID")
+#           }, error = function(e){print(a); cat("ERROR :", conditionMessage(e), "\n")})
+#           
+#           iso.a[[list.index]] = poly2
+#           iso.b[[list.index]] = poly2.mrgd
+#           
+#         } else {
+#           print(paste0(a, ": starting convex hull contains following polygon"))
+#         }
+#       } else {
+#         print(paste0(a, ": no preceding polygon"))
+#       }
+#       
+#       ids = ids[ids != a]
+#     }
+#     # beep()
+#     
+#     # starting polygons
+#     iso.start = iso.temp |> 
+#       filter(progtime == 0)
+#     iso.start$spread.dir = NA
+#     iso.start$prepolyIDs = NA
+#     iso.start$fireline = NA
+#     startlist[[i]] = iso.start
+#     
+#     if(length(iso.a) > 0){
+#       # unmerged progression polygons
+#       iso.a = bind_rows(iso.a)
+#       isolist.ind[[i]] = iso.a
+#     }
+#     if(length(iso.b) > 0){
+#       # merged progression polygons
+#       iso.b = bind_rows(iso.b)
+#       isolist.merged[[i]] = iso.b
+#     }
+#     
+#     # tm_shape(iso.temp) + tm_polygons(col = "black") +
+#     #   tm_shape(iso.b) + tm_polygons(col = "darkred") +
+#     #   tm_shape(iso.a) + tm_polygons(col = "red") +
+#     #   tm_shape(iso.start) + tm_polygons()
+#     
+#   }
+# }
+# beep()
+# isolist.ind1 = bind_rows(isolist.ind)
+# saveRDS(isolist.ind1, "isolist_ind.rds")
+# isolist.merged1 = bind_rows(isolist.merged)
+# saveRDS(isolist.merged1, "isolist_merged.rds")
+# 
+# calculate spread direction for adjacent polygons- ending polygons (redo) ####
 setwd("E:/chapter3/isochrons")
 iso = st_read("isochrons_fireID_grouped.gpkg")
 nrow(iso)
@@ -20,16 +275,18 @@ tmap_mode("view")
 startlist = list()
 isolist.ind = list()
 isolist.merged = list()
+isolist.keep = list()
 counter = 1
 for(i in unique(iso$fireID)){
-  iso.temp = iso |> 
+  iso.temp = iso |>
     filter(fireID == i)
-  
+
   if(nrow(iso.temp) > 0){
     # using the convex hull, create lines extending from the convex hull border to the nearest point on the previous fire progression convex hull
     # identify the longest line from each combination of polygons. This is the direction of fire spread
     iso.a = list()
     iso.b = list()
+    iso.c = list()
     # ids = c(21, 88, 100, 102)
     ids = unique(iso.temp$ID[iso.temp$progtime != 0])
     # ids = ids[ids < 22]
@@ -37,133 +294,135 @@ for(i in unique(iso$fireID)){
     while(length(ids) > 0){
       list.index = counter
       a = ids[1]
-      
+
       # for each polygon, identify previous timestep increase in fire area
-      poly2 = iso.temp |> 
+      poly2 = iso.temp |>
         filter(ID == a)
-      poly2 = rbind(poly2, iso.temp[iso.temp$ID %in% unlist(adj_list[poly2$ID]),] |> 
+      poly2 = rbind(poly2, iso.temp[iso.temp$ID %in% unlist(adj_list[poly2$ID]),] |>
                       filter(time == poly2$time & lasttim == poly2$lasttim))
-      
-      poly1.temp = iso.temp[iso.temp$ID %in% unlist(adj_list[poly2$ID]),] |> 
-        filter(time == poly2$lasttim) 
+
+      poly1.temp = iso.temp[iso.temp$ID %in% unlist(adj_list[poly2$ID]),] |>
+        filter(time == poly2$lasttim)
       # time of final poly2 measurement is the same as previous polygon time recorded for poly1
       ## in other words poly1 time leads to poly2 lasttim
-      
+
       if(nrow(poly1.temp) > 0){
         # final any additional polygons that could lead from poly1
-        poly2.alt = iso.temp[iso.temp$ID %in% unlist(adj_list[poly1.temp$ID]),] |> 
-          filter(lasttim %in% poly1.temp$time) |> 
+        poly2.alt.temp = iso.temp[iso.temp$ID %in% unlist(adj_list[poly1.temp$ID]),] |>
+          filter(lasttim %in% poly1.temp$time) |>
           filter(time == poly2$time)
-        
+
         # tm_shape(iso.temp) + tm_polygons() +
         #   tm_shape(poly1.temp) + tm_polygons(col = "darkblue") +
-        #   tm_shape(poly2.alt) + tm_polygons(col = "red") +
+        #   tm_shape(poly2.alt.temp) + tm_polygons(col = "red") +
         #   tm_shape(poly2) + tm_polygons(col = "darkred")
-        
-        poly1 = st_union(poly1.temp) |> 
+
+        poly1 = st_union(poly1.temp) |>
           st_as_sf()
         st_geometry(poly1.temp) = NULL
         poly1 = cbind(poly1, poly1.temp[1,])
         names(poly1)[names(poly1) == "x"] = "geom"
         st_geometry(poly1) = "geom"
-        
+
         poly1$ID = counter
         counter = counter + 1
         poly1$area = as.numeric(st_area(poly1))
-        
+
         # remove any starting polygons that have no shared fireline
         fireline.final = list()
-        poly2.alt$fireline = NA
-        if(nrow(poly2.alt) > 1){
-          for(x in c(1:nrow(poly2.alt))){
-            pre.line = st_cast(st_intersection(poly1, poly2.alt[x,]))
-            poly2.alt$fireline[x] = as.numeric(sum(st_length(pre.line)))
-            fireline.final[[x]] = poly2.alt$fireline[x]
+        poly2.alt.temp$fireline = NA
+        if(nrow(poly2.alt.temp) > 1){
+          for(x in c(1:nrow(poly2.alt.temp))){
+            pre.line = st_cast(st_intersection(poly1, poly2.alt.temp[x,]))
+            poly2.alt.temp$fireline[x] = as.numeric(sum(st_length(pre.line)))
+            fireline.final[[x]] = poly2.alt.temp$fireline[x]
           }
           if(sum(unlist(fireline.final)) != 0 & any(unlist(fireline.final) == 0)){
-            poly2.alt = poly2.alt |> 
+            poly2.alt.temp = poly2.alt.temp |>
               filter(fireline != 0)
           }
           fireline.final = sum(unlist(fireline.final))
         } else {
-          pre.line = st_cast(st_intersection(poly1, poly2.alt))
+          pre.line = st_cast(st_intersection(poly1, poly2.alt.temp))
           fireline.final = as.numeric(sum(st_length(pre.line)))
         }
-        
-        poly2 = poly2.alt
+
+        poly2 = poly2.alt.temp
         poly2 = st_union(poly2)
-        
+        poly2.alt = poly2.alt.temp
+
         st_geometry(poly2.alt) = NULL
         poly2 = cbind(poly2, poly2.alt[1,])
         names(poly2)[names(poly2) == "geometry"] = "geom"
         st_geometry(poly2) = "geom"
-        
+
         poly2$ID = counter
+        poly2.alt.temp$new.ID = counter
         counter = counter + 1
         poly2$area = as.numeric(st_area(poly2))
-        
+
         # union geometries between starting polygon and next polygon
-        poly2.mrgd = poly1 |> 
-          dplyr::select(geom) |> 
-          st_union() |> 
-          st_union(poly2) |> 
+        poly2.mrgd = poly1 |>
+          dplyr::select(geom) |>
+          st_union() |>
+          st_union(poly2) |>
           st_as_sf()
-        
+
         poly2.mrgd = cbind(poly2.mrgd, poly2.alt[1,])
         names(poly2.mrgd)[names(poly2.mrgd) == "x"] = "geom"
         st_geometry(poly2.mrgd) = "geom"
-        
+
         poly2.mrgd$ID = unique(poly2$ID)
         poly2.mrgd$area = as.numeric(st_area(poly2.mrgd))
-        
+
         ids = ids[!ids %in% poly2.alt$ID]
         iso.alt = do.call("rbind", replicate(length(poly2.alt$ID), poly2.mrgd |> dplyr::select(-fireline), simplify = FALSE))
         iso.alt$ID = poly2.alt$ID
         iso.temp[iso.temp$ID %in% poly2.alt$ID,] = iso.alt
-        
+
         # tm_shape(iso.temp) + tm_polygons() +
         #   tm_shape(poly2.mrgd) + tm_polygons(col = "darkred") +
         #   tm_shape(poly2) + tm_polygons(col = "red") +
         #   tm_shape(poly1) + tm_polygons(col = "darkblue")
-        
+
         # for each timestep in fire growth, convert polygons to points and calculate a convex hull for each
         poly1.pt = st_cast(poly1, "POINT")
         poly1.poly = as.matrix(st_coordinates(poly1.pt))
         ch <- chull(poly1.poly)
         ch <- poly1.poly[c(ch, ch[1]), ]
-        poly1.poly = st_as_sf(as.data.frame(ch), coords = c("X", "Y"), crs = targetcrs) |> 
+        poly1.poly = st_as_sf(as.data.frame(ch), coords = c("X", "Y"), crs = targetcrs) |>
           summarise(geom = st_combine(geometry)) %>%
           st_cast("POLYGON")
-        
+
         poly2.pt = st_cast(poly2.mrgd, "POINT")
         poly2.poly = as.matrix(st_coordinates(poly2.pt))
         ch <- chull(poly2.poly)
         ch <- poly2.poly[c(ch, ch[1]), ]
-        poly2.poly = st_as_sf(as.data.frame(ch), coords = c("X", "Y"), crs = targetcrs) |> 
+        poly2.poly = st_as_sf(as.data.frame(ch), coords = c("X", "Y"), crs = targetcrs) |>
           summarise(geom = st_combine(geometry)) %>%
           st_cast("POLYGON")
-        
+
         # tm_shape(iso.temp) + tm_polygons() +
         #   tm_shape(poly2.poly) + tm_polygons(col = "darkred") +
         #   tm_shape(poly2.mrgd) + tm_polygons(col = "red") +
         #   tm_shape(poly1.poly) + tm_polygons(col = "darkblue") +
         #   tm_shape(poly1) + tm_polygons(col = "blue")
-        
+
         if(!st_contains(poly1.poly, poly2.poly, sparse = F)){
           # sample points on  polygon edge 100 m apart at most
-          poly1.pt = poly1.poly |> 
-            st_segmentize(dfMaxLength = 100) %>% 
-            st_coordinates() %>% 
-            as.data.frame() %>% 
-            select(X, Y) %>% 
+          poly1.pt = poly1.poly |>
+            st_segmentize(dfMaxLength = 100) %>%
+            st_coordinates() %>%
+            as.data.frame() %>%
+            dplyr::select(X, Y) %>%
             st_as_sf(coords = c("X", "Y"), crs = targetcrs)
-          poly2.pt = poly2.poly |> 
-            st_segmentize(dfMaxLength = 100) %>% 
-            st_coordinates() %>% 
-            as.data.frame() %>% 
-            select(X, Y) %>% 
+          poly2.pt = poly2.poly |>
+            st_segmentize(dfMaxLength = 100) %>%
+            st_coordinates() %>%
+            as.data.frame() %>%
+            dplyr::select(X, Y) %>%
             st_as_sf(coords = c("X", "Y"), crs = targetcrs)
-          
+
           tryCatch({
             # calculate minimum distance from 1) points on second polygon back to 2) points on starting polygon
             c<-get.knnx(as.matrix(st_coordinates(poly1.pt)), as.matrix(st_coordinates(poly2.pt)), k = 1)
@@ -171,24 +430,24 @@ for(i in unique(iso$fireID)){
             c.dist = c[[2]]
             c.df = data.frame(index = c[[1]],
                               distance = c[[2]])
-            c.df |> 
+            c.df |>
               filter(distance == max(c.df$distance))
             which(c.df$distance == max(c.df$distance))
-            
-            max2 = poly2.pt[which(c.df$distance == max(c.df$distance)),] |> 
+
+            max2 = poly2.pt[which(c.df$distance == max(c.df$distance)),] |>
               distinct()
-            max1 = poly1.pt[c.df$index[c.df$distance == max(c.df$distance)],] |> 
+            max1 = poly1.pt[c.df$index[c.df$distance == max(c.df$distance)],] |>
               distinct()
-            
+
             sp.dir = mean(unique(as.numeric(nngeo::st_azimuth(max1, max2))))
             poly2$spread.dir = sp.dir
             poly2$prepolyIDs = list(poly1$ID)
             poly2$fireline = fireline.final
-            
+
             poly2.mrgd$spread.dir = sp.dir
             poly2.mrgd$prepolyIDs = list(poly1$ID)
             poly2.mrgd$fireline = fireline.final
-            
+
             # linecheck1 = poly1.pt[c.df$index,]
             # poly2.pt = poly2.pt |> dplyr::select(-fireline)
             # linecheck = list()
@@ -213,29 +472,30 @@ for(i in unique(iso$fireID)){
             #   tm_shape(max1) + tm_dots() +
             #   tm_shape(linecheck) + tm_lines(col = "ID")
           }, error = function(e){print(a); cat("ERROR :", conditionMessage(e), "\n")})
-          
+
           iso.a[[list.index]] = poly2
           iso.b[[list.index]] = poly2.mrgd
-          
+          iso.c[[list.index]] = poly2.alt.temp
+
         } else {
           print(paste0(a, ": starting convex hull contains following polygon"))
         }
       } else {
         print(paste0(a, ": no preceding polygon"))
       }
-      
+
       ids = ids[ids != a]
     }
     # beep()
-    
+
     # starting polygons
-    iso.start = iso.temp |> 
+    iso.start = iso.temp |>
       filter(progtime == 0)
     iso.start$spread.dir = NA
     iso.start$prepolyIDs = NA
     iso.start$fireline = NA
     startlist[[i]] = iso.start
-    
+
     if(length(iso.a) > 0){
       # unmerged progression polygons
       iso.a = bind_rows(iso.a)
@@ -246,19 +506,31 @@ for(i in unique(iso$fireID)){
       iso.b = bind_rows(iso.b)
       isolist.merged[[i]] = iso.b
     }
-    
+    if(length(iso.c) > 0){
+      # original progression polygons tracking ID changes
+      iso.c = bind_rows(iso.c)
+      isolist.keep[[i]] = iso.c
+    }
+
     # tm_shape(iso.temp) + tm_polygons(col = "black") +
     #   tm_shape(iso.b) + tm_polygons(col = "darkred") +
     #   tm_shape(iso.a) + tm_polygons(col = "red") +
     #   tm_shape(iso.start) + tm_polygons()
-    
+
   }
 }
 beep()
+
 isolist.ind1 = bind_rows(isolist.ind)
 saveRDS(isolist.ind1, "isolist_ind.rds")
 isolist.merged1 = bind_rows(isolist.merged)
 saveRDS(isolist.merged1, "isolist_merged.rds")
+isolist.keep1 = bind_rows(isolist.keep)
+saveRDS(isolist.keep1, "isolist_IDs.rds")
+
+# tm_shape(isolist.ind1) + tm_polygons(col = "darkred") +
+#   tm_shape(isolist.merged1) + tm_polygons(col = "darkblue") +
+#   tm_shape(isolist.keep1) + tm_polygons()
 
 # # calculate spread direction for adjacent polygons- starting polygons ####
 # setwd("E:/chapter3/isochrons")
