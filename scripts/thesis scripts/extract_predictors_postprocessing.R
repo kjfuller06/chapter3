@@ -7,18 +7,73 @@ library(tmap)
 library(beepr)
 
 # combine isochrons data ####
+# create index linking new and old polygon IDs
 setwd("E:/chapter3/isochrons")
 isochrons2 = st_read("isochrons_fireID_grouped2.gpkg")
-st_geometry(isochrons2) = NULL
 isochrons2 = isochrons2 |> 
   dplyr::select(ID, fireID)
-isochrons2$fireID = as.factor(isochrons2$fireID)
 nrow(isochrons2)
 ## 121,432
 length(unique(isochrons2$fireID))
 ## 339
 
-# individual isochrons
+ids = readRDS("isolist_IDs.rds")
+st_geometry(ids) = NULL
+ids = ids |> 
+  dplyr::select(ID, new.ID)
+nrow(ids)
+## 106,057
+length(unique(ids$ID))
+## 96,373
+length(unique(ids$new.ID))
+## 33,080
+## new.ID gets larger as the polygons are processed
+ids = aggregate(data = ids, new.ID ~ ID, FUN = max)
+nrow(ids)
+## 96,373
+length(unique(ids$ID))
+## 96,373
+length(unique(ids$new.ID))
+## 31,994
+
+isochrons2 = isochrons2 |> 
+  left_join(ids)
+summary(isochrons2)
+length(unique(isochrons2$ID))
+## 121,432
+isochrons2$new.ID[is.na(isochrons2$new.ID)] = isochrons2$ID[is.na(isochrons2$new.ID)]
+length(unique(isochrons2$new.ID))
+## 50,715
+names(isochrons2) = c("old.ID", "fireID", "ID", "geom")
+
+# combine with original data to extract FFDI for new polygons
+setwd("E:/chapter3/isochrons")
+iso = st_read("isochrons_snapped_qgis.gpkg")
+iso$old.ID = c(1:nrow(iso))
+
+st_geometry(isochrons2) = NULL
+iso = iso |> 
+  left_join(isochrons2)
+iso2 = iso
+st_geometry(iso2) = NULL
+iso2 = aggregate(data = iso2, ffdi_final ~ ID, FUN = mean)
+iso = iso |> 
+  dplyr::select(old.ID:ID) |> 
+  left_join(iso2)
+st_write(iso, "isochrons_grouped_newIDs.gpkg", delete_dsn = T)
+
+isochrons2 = iso
+st_geometry(isochrons2) = NULL
+isochrons2 = isochrons2 |> 
+  dplyr::select(-old.ID) |> 
+  distinct()
+isochrons2 = aggregate(data = isochrons2, fireID ~ ID + ffdi_final, FUN = max)
+nrow(isochrons2)
+## 50,715
+length(unique(isochrons2$ID))
+## 50,715
+
+# join new fire ID and FFDI to grouped polygons
 isochrons = readRDS("isolist_ind.rds")
 # isochrons = st_read("isochrons_prep1.gpkg")
 length(unique(isochrons$ID))
@@ -31,9 +86,11 @@ isochrons = isochrons |>
 isochrons = isochrons |> 
   inner_join(isochrons2)
 length(unique(isochrons$ID))
-## 33,080
+## 32,214
 length(unique(isochrons$fireID))
-## 129
+## 142
+any(duplicated(isochrons$ID))
+## FALSE
 
 isochrons.ids = isochrons |> 
   dplyr::select(ID, fireID, prepolyIDs)
@@ -56,9 +113,11 @@ isochrons.merged = isochrons.merged |>
 isochrons.merged = isochrons.merged |> 
   inner_join(isochrons2)
 length(unique(isochrons.merged$ID))
-## 33,080
+## 32,214
 length(unique(isochrons.merged$fireID))
-## 129
+## 142
+any(duplicated(isochrons.merged$ID))
+## FALSE
 
 isochrons.merged.ids = isochrons.merged |> 
   dplyr::select(ID, fireID, prepolyIDs)
@@ -66,7 +125,7 @@ saveRDS(isochrons.merged.ids, "isolist_merged_groupingsfinal.rds")
 
 isochrons.merged = isochrons.merged |> 
   dplyr::select(-prepolyIDs)
-st_write(isochrons.merged, "isochrons_merged_forextraction.gpkg", delete_dsn = T)
+st_write(isochrons.merged, "isochrons.merged_merged_forextraction.gpkg", delete_dsn = T)
 
 # GEDI ####
 setwd("E:/chapter3/isochrons")
@@ -665,7 +724,177 @@ st_write(iso, "isochrons_wind_m6.gpkg", delete_dsn = T)
 
 ## is wind direction related to spread direction? How similar are they? Note: wind direction will be opposite to intuitive
 
-# terrain ####
+# # terrain ####
+# setwd("D:/chapter1/data")
+# slope = raster("proj_dem_slope_30m.tif")
+# aspect = raster("proj_dem_aspect_30m.tif")
+# elev = raster("proj_dem_s.tif")
+# setwd("E:/chapter3")
+# rough = raster("terrain_roughness.tif")
+# 
+# st_crs(slope) == st_crs(aspect)
+# ## TRUE
+# st_crs(slope) == st_crs(elev)
+# ## TRUE
+# st_crs(slope) == st_crs(rough)
+# ## TRUE
+# 
+# setwd("E:/chapter3/for GAMs")
+# isochrons = st_read("isochrons_wind_m6.gpkg")
+# targetcrs = st_crs(isochrons)
+# isochrons = st_transform(isochrons, crs = st_crs(aspect))
+# iso = isochrons |>
+#   dplyr::select(ID, spread.dir, winddir, windspeed)
+# 
+# iso = st_transform(iso, crs = st_crs(rough))
+# rough = raster::extract(rough, iso, method = 'simple')
+# iso$rough.1 = unlist(lapply(rough, FUN = function(x) quantile(x, probs = 0.1, na.rm = T)))
+# iso$rough.5 = unlist(lapply(rough, FUN = function(x) median(x, na.rm = T)))
+# iso$rough.9 = unlist(lapply(rough, FUN = function(x) quantile(x, probs = 0.9, na.rm = T)))
+# 
+# iso = st_transform(iso, crs = st_crs(elev))
+# elev = raster::extract(elev, iso, method = 'simple')
+# iso$elev.1 = unlist(lapply(elev, FUN = function(x) quantile(x, probs = 0.1, na.rm = T)))
+# iso$elev.5 = unlist(lapply(elev, FUN = function(x) median(x, na.rm = T)))
+# iso$elev.9 = unlist(lapply(elev, FUN = function(x) quantile(x, probs = 0.9, na.rm = T)))
+# 
+# ## subtract spread direction from aspect, essentially re-orienting the slope to be north with respect to fire spread direction
+# ## NOTE: aspect direction points downslope!!
+# Mode <- function(x) {
+#   ux <- unique(x)
+#   ux[which.max(tabulate(match(x, ux)))]
+# }
+# 
+# i = unique(isochrons$ID)[1]
+# iso.list = list()
+# for(i in unique(isochrons$ID)){
+#   iso.temp = isochrons |> 
+#     filter(ID == i)
+#   aspect.temp = raster::extract(aspect, iso.temp, method = 'simple')
+#   slope.temp = raster::extract(slope, iso.temp, method = 'simple')
+#   
+#   # reorient slope aspect relative to fire spread direction
+#   aspect.temp[[1]] = aspect.temp[[1]] - iso.temp$spread.dir
+#   
+#   # reorient wind direction relative to spread direction
+#   iso.temp$winddir2 = iso.temp$winddir - iso.temp$spread.dir
+#   
+#   # correct slope aspects that are negative relative to spread direction
+#   vect = aspect.temp[[1]] > 90 & aspect.temp[[1]] < 270
+#   slope.temp[[1]][vect] = -slope.temp[[1]][vect]
+#   
+#   # calculate the net effective wind vector in the t and u directions
+#   w.s.speed = iso.temp$windspeed* sin(iso.temp$winddir2*pi/180 - aspect.temp[[1]]*pi/180) + 
+#               iso.temp$windspeed* cos(iso.temp$winddir2*pi/180 - aspect.temp[[1]]*pi/180)
+#   slopecorrection = 150.98*tan(abs(slope.temp[[1]])*pi/180)^1.2
+#   slopecorrection[vect] = -slopecorrection[vect]
+#   w.s.speed = w.s.speed + slopecorrection
+#   
+#   iso.temp$w.s.speed = Mode(w.s.speed)
+#   iso.temp$slope = Mode(slope.temp[[1]])
+#   iso.temp$aspect = Mode(aspect.temp[[1]])
+#   
+#   iso.list[[i]] = iso.temp
+# }
+# iso = bind_rows(iso.list)
+# 
+# # iso$windspeed.cat = NA
+# # iso$windspeed.cat[iso$windspeed <= 10] = "low"
+# # iso$windspeed.cat[iso$windspeed > 10 & iso$windspeed < 30] = "moderate"
+# # iso$windspeed.cat[iso$windspeed >= 30] = "high"
+# # iso$windspeed.cat = factor(iso$windspeed.cat, levels = c("low",
+# #                                                              "moderate",
+# #                                                              "high"))
+# # 
+# # iso$aspect.cat = NA
+# # iso$aspect.cat[iso$aspect > 90 & iso$aspect < 270] = "against"
+# # iso$aspect.cat[iso$aspect <= 90 | iso$aspect >= 270] = "with"
+# # 
+# # iso$slope.cat = NA
+# # iso$slope.cat[iso$slope >= 0] = "upslope"
+# # iso$slope.cat[iso$slope < 0] = "downslope"
+# # 
+# # iso$winddir.cat = NA
+# # iso$winddir.cat[iso$winddir > 90 & iso$winddir < 270] = "against"
+# # iso$winddir.cat[iso$winddir <= 90 | iso$winddir >= 270] = "with"
+# # 
+# # ggplot(iso, aes(x = slope, y = w.s.speed)) +
+# #   geom_point(aes(col = winddir.cat)) +
+# #   geom_smooth(method = "lm", aes(col = winddir.cat))
+# # ggplot(iso, aes(x = winddir, y = w.s.speed)) +
+# #   geom_point(aes(col = aspect)) +
+# #   scale_x_continuous(breaks = c(0, 90, 180, 270, 360)) + 
+# #   facet_wrap(facets = "windspeed.cat")
+# # ggplot(iso, aes(x = windspeed, y = w.s.speed)) +
+# #   geom_point(aes(col = winddir.cat))
+# 
+# ## remove any slopes > 40 degrees?
+# 
+# st_geometry(iso) = NULL
+# isochrons = isochrons |> 
+#   left_join(iso)
+# st_write(isochrons, "isolist_terrain_m6.gpkg", delete_dsn = T)
+# 
+# strahler ####
+setwd("E:/chapter3/for GAMs")
+iso = st_read("isolist_terrain_m6.gpkg")
+targetcrs = st_crs(iso)
+g = iso |> 
+  dplyr::select(ID)
+
+setwd("D:/chapter3/climatedem")
+g.temp = list()
+for(i in c(11:3)){
+  s_all = st_read(paste0("strahler", i, ".gpkg")) |> st_transform(crs = targetcrs)
+  names(s_all)[1:2] = c("cat", "value")
+  s_all$value = as.numeric(s_all$value)
+  
+  s.temp = st_intersection(s_all, g)
+  if(nrow(s.temp) > 0){
+    s.temp$length = as.numeric(st_length(s.temp))
+    st_geometry(s.temp) = NULL
+    s.temp = aggregate(data = s.temp, length ~ ID, FUN = sum)
+    s.temp$length[is.na(s.temp$length)] = 0
+    names(s.temp)[2] = paste0("strahler", i, ".only")
+    
+    g.temp[[i]] = s.temp
+  }
+}
+g = iso |> 
+  # left_join(g.temp[[3]]) |> 
+  left_join(g.temp[[4]]) |> 
+  left_join(g.temp[[5]]) |> 
+  left_join(g.temp[[6]]) |> 
+  left_join(g.temp[[7]]) |> 
+  left_join(g.temp[[8]]) |> 
+  left_join(g.temp[[9]]) |> 
+  left_join(g.temp[[10]]) |> 
+  left_join(g.temp[[11]])
+
+# g$strahler3.only[is.na(g$strahler3.only)] = 0
+g$strahler4.only[is.na(g$strahler4.only)] = 0
+g$strahler5.only[is.na(g$strahler5.only)] = 0
+g$strahler6.only[is.na(g$strahler6.only)] = 0
+g$strahler7.only[is.na(g$strahler7.only)] = 0
+g$strahler8.only[is.na(g$strahler8.only)] = 0
+g$strahler9.only[is.na(g$strahler9.only)] = 0
+g$strahler10.only[is.na(g$strahler10.only)] = 0
+g$strahler11.only[is.na(g$strahler11.only)] = 0
+
+g$s11.only = g$strahler11.only/g$area
+g$s10.only = g$strahler10.only/g$area
+g$s9.only = g$strahler9.only/g$area
+g$s8.only = g$strahler8.only/g$area
+g$s7.only = g$strahler7.only/g$area
+g$s6.only = g$strahler6.only/g$area
+g$s5.only = g$strahler5.only/g$area
+g$s4.only = g$strahler4.only/g$area
+# g$s3.only = g$strahler3.only/g$area
+
+setwd("E:/chapter3/for GAMs")
+st_write(g, "isolist_strahler_m7.gpkg", delete_dsn = T)
+
+# terrain, redo ####
 setwd("D:/chapter1/data")
 slope = raster("proj_dem_slope_30m.tif")
 aspect = raster("proj_dem_aspect_30m.tif")
@@ -681,19 +910,20 @@ st_crs(slope) == st_crs(rough)
 ## TRUE
 
 setwd("E:/chapter3/for GAMs")
-isochrons = st_read("isochrons_wind_m6.gpkg")
+isochrons = st_read("isolist_strahler_m7.gpkg")
 targetcrs = st_crs(isochrons)
+isochrons = isochrons |> 
+  dplyr::select(-c(w.s.speed, slope, aspect))
+
 isochrons = st_transform(isochrons, crs = st_crs(aspect))
 iso = isochrons |>
   dplyr::select(ID, spread.dir, winddir, windspeed)
 
-iso = st_transform(iso, crs = st_crs(rough))
 rough = raster::extract(rough, iso, method = 'simple')
 iso$rough.1 = unlist(lapply(rough, FUN = function(x) quantile(x, probs = 0.1, na.rm = T)))
 iso$rough.5 = unlist(lapply(rough, FUN = function(x) median(x, na.rm = T)))
 iso$rough.9 = unlist(lapply(rough, FUN = function(x) quantile(x, probs = 0.9, na.rm = T)))
 
-iso = st_transform(iso, crs = st_crs(elev))
 elev = raster::extract(elev, iso, method = 'simple')
 iso$elev.1 = unlist(lapply(elev, FUN = function(x) quantile(x, probs = 0.1, na.rm = T)))
 iso$elev.5 = unlist(lapply(elev, FUN = function(x) median(x, na.rm = T)))
@@ -701,10 +931,11 @@ iso$elev.9 = unlist(lapply(elev, FUN = function(x) quantile(x, probs = 0.9, na.r
 
 ## subtract spread direction from aspect, essentially re-orienting the slope to be north with respect to fire spread direction
 ## NOTE: aspect direction points downslope!!
-Mode <- function(x) {
-  ux <- unique(x)
-  ux[which.max(tabulate(match(x, ux)))]
-}
+
+# Mode <- function(x) {
+#   ux <- unique(x)
+#   ux[which.max(tabulate(match(x, ux)))]
+# }
 
 i = unique(isochrons$ID)[1]
 iso.list = list()
@@ -724,66 +955,81 @@ for(i in unique(isochrons$ID)){
   vect = aspect.temp[[1]] > 90 & aspect.temp[[1]] < 270
   slope.temp[[1]][vect] = -slope.temp[[1]][vect]
   
-  # calculate the net effective wind vector in the t and u directions
-  w.s.speed = iso.temp$windspeed* sin(iso.temp$winddir2*pi/180 - aspect.temp[[1]]*pi/180) + 
-              iso.temp$windspeed* cos(iso.temp$winddir2*pi/180 - aspect.temp[[1]]*pi/180)
+  # calculate the net effective wind vector in the u direction only
+  w.s.speed = iso.temp$windspeed* cos(iso.temp$winddir2*pi/180 - aspect.temp[[1]]*pi/180)
   slopecorrection = 150.98*tan(abs(slope.temp[[1]])*pi/180)^1.2
   slopecorrection[vect] = -slopecorrection[vect]
   w.s.speed = w.s.speed + slopecorrection
   
-  iso.temp$w.s.speed = Mode(w.s.speed)
-  iso.temp$slope = Mode(slope.temp[[1]])
-  iso.temp$aspect = Mode(aspect.temp[[1]])
+  iso.temp$w.s.up.speed = median(w.s.speed, na.rm = T)
+  iso.temp$slope = median(slope.temp[[1]], na.rm = T)
+  iso.temp$aspect = median(aspect.temp[[1]], na.rm = T)
   
   iso.list[[i]] = iso.temp
 }
-iso = bind_rows(iso.list)
-
-# iso$windspeed.cat = NA
-# iso$windspeed.cat[iso$windspeed <= 10] = "low"
-# iso$windspeed.cat[iso$windspeed > 10 & iso$windspeed < 30] = "moderate"
-# iso$windspeed.cat[iso$windspeed >= 30] = "high"
-# iso$windspeed.cat = factor(iso$windspeed.cat, levels = c("low",
-#                                                              "moderate",
-#                                                              "high"))
-# 
-# iso$aspect.cat = NA
-# iso$aspect.cat[iso$aspect > 90 & iso$aspect < 270] = "against"
-# iso$aspect.cat[iso$aspect <= 90 | iso$aspect >= 270] = "with"
-# 
-# iso$slope.cat = NA
-# iso$slope.cat[iso$slope >= 0] = "upslope"
-# iso$slope.cat[iso$slope < 0] = "downslope"
-# 
-# iso$winddir.cat = NA
-# iso$winddir.cat[iso$winddir > 90 & iso$winddir < 270] = "against"
-# iso$winddir.cat[iso$winddir <= 90 | iso$winddir >= 270] = "with"
-# 
-# ggplot(iso, aes(x = slope, y = w.s.speed)) +
-#   geom_point(aes(col = winddir.cat)) +
-#   geom_smooth(method = "lm", aes(col = winddir.cat))
-# ggplot(iso, aes(x = winddir, y = w.s.speed)) +
-#   geom_point(aes(col = aspect)) +
-#   scale_x_continuous(breaks = c(0, 90, 180, 270, 360)) + 
-#   facet_wrap(facets = "windspeed.cat")
-# ggplot(iso, aes(x = windspeed, y = w.s.speed)) +
-#   geom_point(aes(col = winddir.cat))
-
-## remove any slopes > 40 degrees?
+iso.list = bind_rows(iso.list)
 
 st_geometry(iso) = NULL
+st_geometry(iso.list) = NULL
+
 isochrons = isochrons |> 
-  left_join(iso)
-st_write(isochrons, paste0("isolist_terrain_m6.gpkg"), delete_dsn = T)
+  left_join(iso) |> 
+  left_join(iso.list)
+st_write(isochrons, "isolist_terrain_m8.gpkg", delete_dsn = T)
+
+# terrain, redo redo ####
+setwd("D:/chapter1/data")
+slope = raster("proj_dem_slope_30m.tif")
+aspect = raster("proj_dem_aspect_30m.tif")
+
+st_crs(slope) == st_crs(aspect)
+## TRUE
+
+setwd("E:/chapter3/for GAMs")
+isochrons = st_read("isolist_terrain_m8.gpkg")
+targetcrs = st_crs(isochrons)
+
+isochrons = st_transform(isochrons, crs = st_crs(aspect))
+iso = isochrons |>
+  dplyr::select(ID, spread.dir, winddir, windspeed)
+
+i = unique(isochrons$ID)[1]
+iso.list = list()
+for(i in unique(isochrons$ID)){
+  iso.temp = isochrons |> 
+    filter(ID == i)
+  aspect.temp = raster::extract(aspect, iso.temp, method = 'simple')
+  slope.temp = raster::extract(slope, iso.temp, method = 'simple')
+  
+  # reorient slope aspect relative to fire spread direction
+  aspect.temp[[1]] = aspect.temp[[1]] - iso.temp$spread.dir
+  
+  # reorient wind direction relative to spread direction
+  iso.temp$winddir2 = iso.temp$winddir - iso.temp$spread.dir
+  
+  # calculate the net effective wind vector in the u direction only
+  w.s.speed = sqrt(iso.temp$windspeed^2 * sin(iso.temp$winddir2*pi/180 - aspect.temp[[1]]*pi/180)^2 + (iso.temp$windspeed* cos(iso.temp$winddir2*pi/180 - aspect.temp[[1]]*pi/180) + 150.98*tan(abs(slope.temp[[1]])*pi/180)^1.2)^2)
+  
+  iso.temp$w.s.speed.mag = median(w.s.speed, na.rm = T)
+  
+  iso.list[[i]] = iso.temp
+}
+iso.list = bind_rows(iso.list)
+
+st_geometry(iso.list) = NULL
+
+isochrons = isochrons |> 
+  left_join(iso.list)
+st_write(isochrons, "isolist_terrain_m9.gpkg", delete_dsn = T)
 
 # look at NaNs ####
 tmap_mode("view")
 setwd("E:/chapter3/for GAMs")
-iso = st_read("isochrons_strahler_m8.gpkg")
+iso = st_read("isolist_terrain_m9.gpkg")
 iso
 iso = st_make_valid(iso)
 nrow(iso)
-## 70,370
+## 33,080
 
 setwd("D:/chapter1/data")
 nsw = st_read("NSW_sans_islands.shp") |> 
@@ -792,45 +1038,45 @@ nsw = st_read("NSW_sans_islands.shp") |>
 iso.yes = st_contains(nsw, iso)
 iso = iso[unlist(iso.yes),]
 nrow(iso)
-## 70,076
+## 32,842
 
 # - - - wind - - - #
 nrow(iso |> filter(is.na(winddir)))
-## 270
+## 32
 tm_shape(iso |> filter(is.na(winddir))) + tm_polygons()
 iso |> filter(is.na(winddir))
 ## all wind variables are NaN
 iso = iso |> 
   filter(!is.na(winddir))
 nrow(iso)
-## 69,806
+## 32,810
 
 nrow(iso |> filter(is.na(windgust.stdev)))
-## 390
+## 94
 tm_shape(iso |> filter(is.na(windgust.stdev))) + tm_polygons()
 iso |> filter(is.na(windgust.stdev))
 ## few other variables NaN
 iso |> filter(is.na(windgust))
-## only two observations, worth removing
+## only 4 observations, worth removing
 iso = iso |> 
   filter(!is.na(windgust))
 nrow(iso)
-## 69,804
+## 32,806
 
 # - - - LFMC - - - #
 nrow(iso |> filter(is.na(LFMC)))
-## 3,568
+## 1,638
 tm_shape(iso |> filter(is.na(LFMC))) + tm_polygons()
 iso |> filter(is.na(LFMC))
 ## LFMC is a critical variable
 iso = iso |> 
   filter(!is.na(LFMC))
 nrow(iso)
-## 66,236
+## 31,168
 
 # - - - barktypes - - - #
 nrow(iso |> filter(is.na(stringybark.1)))
-## 5,017
+## 1,945
 tm_shape(iso |> filter(is.na(stringybark.1))) + tm_polygons()
 iso |> filter(is.na(stringybark.1))
 summary(iso |> filter(is.na(stringybark.1)))
@@ -850,51 +1096,44 @@ summary(unlist(lapply(l, FUN = function(x) quantile(x, probs = 0.1, na.rm = T)))
 iso = iso |> 
   filter(!is.na(stringybark.1))
 nrow(iso)
-## 61,219
-
-# - - - Strahler - - - #
-nrow(iso |> filter(is.na(strahler4)))
-## 33,708
-nrow(iso |> filter(is.na(strahler11)))
-## 61,137
-min(iso$strahler4, na.rm = T)
-## all NaNs are length of stream = 0
-iso |> filter(is.na(strahler4) & !is.na(strahler11))
-iso |> filter(is.na(strahler11) & !is.na(strahler4))
-## lengths of stream added to each successive Strahler classification (larger stream lengths added to smaller streams, not the other way around)
-## NaNs caused by no streams being present
-
-iso$strahler4[is.na(iso$strahler4)] = 0
-iso$strahler5[is.na(iso$strahler5)] = 0
-iso$strahler6[is.na(iso$strahler6)] = 0
-iso$strahler7[is.na(iso$strahler7)] = 0
-iso$strahler8[is.na(iso$strahler8)] = 0
-iso$strahler9[is.na(iso$strahler9)] = 0
-iso$strahler10[is.na(iso$strahler10)] = 0
-iso$strahler11[is.na(iso$strahler11)] = 0
-summary(iso)
+## 29,223
 
 # - - - GEDI - - - #
-nrow(iso |> filter(is.na(rh98)))
-## 56,658
+nrow(iso |> filter(is.na(rh98.12.5)))
+## 23,710
 ## this is the VAST majority of fire polygons!!
 
 setwd("E:/chapter3/for GAMs")
-st_write(iso, "isochrons_prep1.gpkg", delete_dsn = T)
+st_write(iso, "isolist_prep1.gpkg", delete_dsn = T)
 
 # prep ####
 setwd("D:/chapter1/data")
 fireregs = read.csv("fire_regimes.csv")
 
+setwd("E:/chapter3/isochrons")
+iso = st_read("isochrons_grouped_newIDs.gpkg")
+iso.temp = iso |> filter(ID %in% c(85670, 85672, 85674, 85676, 85678, 85680))
+iso = iso |> 
+  dplyr::select(ID, ffdi_final) |> 
+  distinct()
+st_geometry(iso) = NULL
+
 setwd("E:/chapter3/for GAMs")
-isochrons = st_read("isochrons_prep2.gpkg")
+isochrons = st_read("isolist_prep1.gpkg")
 length(unique(isochrons$ID))
-## 61,219
+## 29,223
+isochrons.temp = isochrons |> filter(ID %in% c(85670, 85672, 85674, 85676, 85678, 85680))
+tm_shape(isochrons.temp) + tm_polygons(col = "darkred") +
+  tm_shape(iso.temp) + tm_polygons(col = "darkblue")
 
 isochrons = isochrons |> filter(fueltype < 42)
-isochrons = isochrons |> left_join(fireregs)
+isochrons = isochrons |> 
+  left_join(fireregs) |> 
+  left_join(iso)
+isochrons = isochrons[!duplicated(isochrons$ID),] |> 
+  filter(!is.na(ffdi_final))
 nrow(isochrons)
-## 58,888
+## 26,424
 
 isochrons$fire_reg[isochrons$fire_reg == 7] = 6
 
@@ -906,18 +1145,6 @@ isochrons$stringybark.5 = as.factor(isochrons$stringybark.5)
 
 isochrons$ribbonbark.5[isochrons$ribbonbark.5 == 0.5] = 1
 isochrons$ribbonbark.5 = as.factor(isochrons$ribbonbark.5)
-
-isochrons$s11 = isochrons$strahler11/isochrons$area
-isochrons$s10 = isochrons$strahler10/isochrons$area
-isochrons$s9 = isochrons$strahler9/isochrons$area
-isochrons$s8 = isochrons$strahler8/isochrons$area
-isochrons$s7 = isochrons$strahler7/isochrons$area
-isochrons$s6 = isochrons$strahler6/isochrons$area
-isochrons$s5 = isochrons$strahler5/isochrons$area
-isochrons$s4 = isochrons$strahler4/isochrons$area
-
-isochrons$windnorth = cos(isochrons$winddir * pi / 180)
-isochrons$windeast = sin(isochrons$winddir * pi / 180)
 
 isochrons$ffdi_cat = NA
 isochrons$ffdi_cat[isochrons$ffdi_final <= 12] = "one"
@@ -931,74 +1158,21 @@ isochrons$ffdi_cat = factor(isochrons$ffdi_cat, levels = c("one",
                                            "three",
                                            "four"))
 
+
 isochrons = na.omit(isochrons)
 nrow(isochrons)
-##58,556
+## 5,025
+
+# tm_shape(isochrons) + tm_polygons()
 
 b = isochrons
 st_geometry(b) = NULL
 b |> group_by(fire_reg) |> tally() |> as.data.frame()
-# rainforest:                 3378
-# wet sclerophyll (shrubby):  9619
-# wet sclerophyll (grassy):   9635
-# dry sclerophyll (s/g):      11506
-# dry sclerophyll (shrubby):  23397
-# grassy woodland:            1348
+# rainforest:                 208
+# wet sclerophyll (shrubby):  706
+# wet sclerophyll (grassy):   1101
+# dry sclerophyll (s/g):      1136
+# dry sclerophyll (shrubby):  1733
+# grassy woodland:            141
 
-st_write(isochrons, "isochrons_prep3.gpkg", delete_dsn = T)
-
-# strahler, redo ####
-setwd("E:/chapter3/for GAMs")
-iso = st_read("isochrons_prep3.gpkg")
-targetcrs = st_crs(iso)
-g = iso |> 
-  dplyr::select(ID)
-
-setwd("D:/chapter3/climatedem")
-g.temp = list()
-for(i in c(11:4)){
-  s_all = st_read(paste0("strahler", i, ".gpkg")) |> st_transform(crs = targetcrs)
-  names(s_all)[1:2] = c("cat", "value")
-  s_all$value = as.numeric(s_all$value)
-  
-  s.temp = st_intersection(s_all, g)
-  if(nrow(s.temp) > 0){
-    s.temp$length = as.numeric(st_length(s.temp))
-    st_geometry(s.temp) = NULL
-    s.temp = aggregate(data = s.temp, length ~ ID, FUN = sum)
-    s.temp$length[is.na(s.temp$length)] = 0
-    names(s.temp)[2] = paste0("strahler", i, ".only")
-    
-    g.temp[[i]] = s.temp
-  }
-}
-g = iso |> 
-  left_join(g.temp[[4]]) |> 
-  left_join(g.temp[[5]]) |> 
-  left_join(g.temp[[6]]) |> 
-  left_join(g.temp[[7]]) |> 
-  left_join(g.temp[[8]]) |> 
-  left_join(g.temp[[9]]) |> 
-  left_join(g.temp[[10]]) |> 
-  left_join(g.temp[[11]])
-
-g$strahler4.only[is.na(g$strahler4.only)] = 0
-g$strahler5.only[is.na(g$strahler5.only)] = 0
-g$strahler6.only[is.na(g$strahler6.only)] = 0
-g$strahler7.only[is.na(g$strahler7.only)] = 0
-g$strahler8.only[is.na(g$strahler8.only)] = 0
-g$strahler9.only[is.na(g$strahler9.only)] = 0
-g$strahler10.only[is.na(g$strahler10.only)] = 0
-g$strahler11.only[is.na(g$strahler11.only)] = 0
-
-g$s11.only = g$strahler11.only/g$area
-g$s10.only = g$strahler10.only/g$area
-g$s9.only = g$strahler9.only/g$area
-g$s8.only = g$strahler8.only/g$area
-g$s7.only = g$strahler7.only/g$area
-g$s6.only = g$strahler6.only/g$area
-g$s5.only = g$strahler5.only/g$area
-g$s4.only = g$strahler4.only/g$area
-
-setwd("E:/chapter3/for GAMs")
-st_write(g, "isochrons_prep4.gpkg", delete_dsn = T)
+st_write(isochrons, "isochrons_prep2.gpkg", delete_dsn = T)
