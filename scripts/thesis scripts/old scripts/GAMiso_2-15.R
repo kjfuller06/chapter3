@@ -16,11 +16,14 @@ library(car)
 library(MuMIn)
 library(metR)
 
+# GAM ####
 setwd("E:/chapter3/for GAMs")
 x = 180
 modelnom = paste0("ch3_GAM_iso_prefire", x, "_redo_2-15")
 g = read.csv(paste0("trainingdata_prefire", x, "_iso_redo_2-15.csv"))
 g$ffdi_cat = as.factor(g$ffdi_cat)
+# g = g |> 
+#   filter(fire_reg > 1 & fire_reg < 6)
 g$fire_reg = as.factor(g$fire_reg)
 g$logprog = log(g$prog)
 g$stringybark = as.factor(g$stringybark)
@@ -47,14 +50,15 @@ g$ribbonbark.9 = as.factor(g$ribbonbark.9)
 
 set.seed(10)
 gam1 = bam(logprog ~ 
-             s(cover_z_1.1, k = 3) +
-             s(elevation_sd, k = 200) +
+             s(cover_z_1.1, k = 15) +
+             s(elevation_sd, k = 15) +
              stringybark + 
-             s(LFMC.1, k = 80) +
-             s(VPD, k = 342) +  
+             s(LFMC.1, k = 15) +
+             s(VPD, k = 15) +  
              s(winddir.stdev, k = 15) +
-             s(windspeed.stdev, k = 15) + 
-             s(hydro4.9),
+             s(windspeed.stdev, k = 15) +
+             s(hydro4.9, k = 15),
+             # fire_reg,
            data = g, 
            method = "fREML")
 summary(gam1)
@@ -69,8 +73,8 @@ par(mfrow = c(2, 2))
 gam.check(gam1)
 k.check(gam1)
 
-setwd("D:/chapter3/outputs/GAMs")
-# saveRDS(gam1, paste0(modelnom, ".rds"))
+setwd("C:/chapter3/outputs")
+saveRDS(gam1, paste0(modelnom, ".rds"))
 gam1 = readRDS(paste0(modelnom, ".rds"))
 
 capture.output(
@@ -152,7 +156,7 @@ test$error = test$prediction - test$logprog
 R2 = 1 - (sum((test$logprog - test$prediction)^2)/sum((test$logprog - mean(test$logprog))^2))
 R2
 
-setwd("D:/chapter3/outputs/GAMs")
+setwd("C:/chapter3/outputs")
 capture.output(
   print("************************** R^2 ****************************"), print(paste0("test R^2 = ", R2)),
   file = paste0(modelnom, "modeloutputs.txt"),
@@ -174,3 +178,163 @@ capture.output(
   file = paste0(modelnom, "modeloutputs.txt"),
   append = T)
 
+# partial deviance ####
+set.seed(10)
+gam.all = bam(logprog ~ 
+             s(cover_z_1.1, k = 15) +
+             s(elevation_sd, k = 15) +
+             stringybark + 
+             s(LFMC.1, k = 15) +
+             s(VPD, k = 15) +  
+             s(winddir.stdev, k = 15) +
+             s(windspeed.stdev, k = 15) + 
+             s(hydro4.9, k = 15),
+           data = g, 
+           method = "fREML")
+set.seed(10)
+gam.null = gam(logprog ~ 1,
+               data = g)
+
+# elevation
+set.seed(10)
+gam.2 = bam(logprog ~ 
+              s(cover_z_1.1, k = 15) +
+              stringybark + 
+              s(LFMC.1, k = 15) +
+              s(VPD, k = 15) +  
+              s(winddir.stdev, k = 15) +
+              s(windspeed.stdev, k = 15) + 
+              s(hydro4.9, k = 15),
+            sp = gam.all$sp[-2],
+            data = g, 
+            method = "fREML")
+
+100 - (summary(gam.2)$dev.expl/summary(gam.all)$dev.expl)*100
+## 52.1
+## 53.16
+
+# understorey cover
+set.seed(10)
+gam.2 = bam(logprog ~ 
+                s(elevation_sd, k = 15) +
+                stringybark + 
+                s(LFMC.1, k = 15) +
+                s(VPD, k = 15) +  
+                s(winddir.stdev, k = 15) +
+                s(windspeed.stdev, k = 15) + 
+                s(hydro4.9, k = 15),
+              sp = gam.all$sp[-1],
+              data = g, 
+              method = "fREML")
+
+100 - (summary(gam.2)$dev.expl/summary(gam.all)$dev.expl)*100
+## 5.09
+## 4.92
+
+# stringybark
+set.seed(10)
+gam.2 = bam(logprog ~ 
+              s(cover_z_1.1, k = 15) +
+              s(elevation_sd, k = 15) +
+              s(LFMC.1, k = 15) +
+              s(VPD, k = 15) +  
+              s(winddir.stdev, k = 15) +
+              s(windspeed.stdev, k = 15) + 
+              s(hydro4.9, k = 15),
+            sp = gam.all$sp,
+            data = g, 
+            method = "fREML")
+
+100 - (summary(gam.2)$dev.expl/summary(gam.all)$dev.expl)*100
+## 1.6
+## 1.22
+
+# LFMC
+set.seed(10)
+gam.2 = bam(logprog ~ 
+              s(cover_z_1.1, k = 15) +
+              s(elevation_sd, k = 15) +
+              stringybark + 
+              s(VPD, k = 15) +  
+              s(winddir.stdev, k = 15) +
+              s(windspeed.stdev, k = 15) + 
+              s(hydro4.9, k = 15),
+            sp = gam.all$sp[-3],
+            data = g, 
+            method = "fREML")
+
+100 - (summary(gam.2)$dev.expl/summary(gam.all)$dev.expl)*100
+## 2.7
+## 2.54
+
+# VPD
+set.seed(10)
+gam.2 = bam(logprog ~ 
+              s(cover_z_1.1, k = 15) +
+              s(elevation_sd, k = 15) +
+              stringybark + 
+              s(LFMC.1, k = 15) +
+              s(winddir.stdev, k = 15) +
+              s(windspeed.stdev, k = 15) + 
+              s(hydro4.9, k = 15),
+            sp = gam.all$sp[-4],
+            data = g, 
+            method = "fREML")
+
+100 - (summary(gam.2)$dev.expl/summary(gam.all)$dev.expl)*100
+## 2.6
+## 2.41
+
+# wind direction
+set.seed(10)
+gam.2 = bam(logprog ~ 
+              s(cover_z_1.1, k = 15) +
+              s(elevation_sd, k = 15) +
+              stringybark + 
+              s(LFMC.1, k = 15) +
+              s(VPD, k = 15) +
+              s(windspeed.stdev, k = 15) + 
+              s(hydro4.9, k = 15),
+            sp = gam.all$sp[-5],
+            data = g, 
+            method = "fREML")
+
+100 - (summary(gam.2)$dev.expl/summary(gam.all)$dev.expl)*100
+## 5.3
+## 5.03
+
+# wind speed
+set.seed(10)
+gam.2 = bam(logprog ~ 
+              s(cover_z_1.1, k = 15) +
+              s(elevation_sd, k = 15) +
+              stringybark + 
+              s(LFMC.1, k = 15) +
+              s(VPD, k = 15) +  
+              s(winddir.stdev, k = 15) +
+              s(hydro4.9, k = 15),
+            sp = gam.all$sp[-6],
+            data = g, 
+            method = "fREML")
+
+100 - (summary(gam.2)$dev.expl/summary(gam.all)$dev.expl)*100
+## 1.5
+## 1.47
+
+# distance to streams
+set.seed(10)
+gam.2 = bam(logprog ~ 
+              s(cover_z_1.1, k = 15) +
+              s(elevation_sd, k = 15) +
+              stringybark + 
+              s(LFMC.1, k = 15) +
+              s(VPD, k = 15) +  
+              s(winddir.stdev, k = 15) +
+              s(windspeed.stdev, k = 15),
+            sp = gam.all$sp[-7],
+            data = g, 
+            method = "fREML")
+
+100 - (summary(gam.2)$dev.expl/summary(gam.all)$dev.expl)*100
+## 1.2
+## 1.21
