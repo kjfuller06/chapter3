@@ -1112,7 +1112,6 @@ fireregs = read.csv("fire_regimes.csv")
 
 setwd("E:/chapter3/isochrons")
 iso = st_read("isochrons_grouped_newIDs.gpkg")
-iso.temp = iso |> filter(ID %in% c(85670, 85672, 85674, 85676, 85678, 85680))
 iso = iso |> 
   dplyr::select(ID, ffdi_final) |> 
   distinct()
@@ -1122,9 +1121,6 @@ setwd("E:/chapter3/for GAMs")
 isochrons = st_read("isolist_prep1.gpkg")
 length(unique(isochrons$ID))
 ## 29,223
-isochrons.temp = isochrons |> filter(ID %in% c(85670, 85672, 85674, 85676, 85678, 85680))
-tm_shape(isochrons.temp) + tm_polygons(col = "darkred") +
-  tm_shape(iso.temp) + tm_polygons(col = "darkblue")
 
 isochrons = isochrons |> filter(fueltype < 42)
 isochrons = isochrons |> 
@@ -1137,7 +1133,10 @@ nrow(isochrons)
 
 isochrons$fire_reg[isochrons$fire_reg == 7] = 6
 
+isochrons$prog = isochrons$area/isochrons$progtime
 isochrons$logprog = log(isochrons$prog)
+isochrons$fireline[isochrons$fireline == 0] = 1
+isochrons$spread = isochrons$prog/isochrons$fireline
 isochrons$logspread = log(isochrons$spread)
 
 isochrons$stringybark.5[isochrons$stringybark.5 == 0.5] = 1
@@ -1158,12 +1157,67 @@ isochrons$ffdi_cat = factor(isochrons$ffdi_cat, levels = c("one",
                                            "three",
                                            "four"))
 
+isochrons$stringybark.9[isochrons$stringybark.9 < 0.5] = 0
+isochrons$stringybark.9[isochrons$stringybark.9 >= 0.5] = 1
+isochrons$stringybark.9 = as.factor(isochrons$stringybark.9)
+
+isochrons$ribbonbark.9[isochrons$ribbonbark.9 < 0.5] = 0
+isochrons$ribbonbark.9[isochrons$ribbonbark.9 >= 0.5] = 1
+isochrons$ribbonbark.9 = as.factor(isochrons$ribbonbark.9)
+
+isochrons$s4.cumu = isochrons$s4.only +
+  isochrons$s5.only +
+  isochrons$s6.only +
+  isochrons$s7.only +
+  isochrons$s8.only +
+  isochrons$s9.only +
+  isochrons$s10.only +
+  isochrons$s11.only
+
+isochrons$s5.cumu =
+  isochrons$s5.only +
+  isochrons$s6.only +
+  isochrons$s7.only +
+  isochrons$s8.only +
+  isochrons$s9.only +
+  isochrons$s10.only +
+  isochrons$s11.only
+
+isochrons$s6.cumu =
+  isochrons$s6.only +
+  isochrons$s7.only +
+  isochrons$s8.only +
+  isochrons$s9.only +
+  isochrons$s10.only +
+  isochrons$s11.only
+
+isochrons$s7.cumu =
+  isochrons$s7.only +
+  isochrons$s8.only +
+  isochrons$s9.only +
+  isochrons$s10.only +
+  isochrons$s11.only
+
+isochrons$s8.cumu =
+  isochrons$s8.only +
+  isochrons$s9.only +
+  isochrons$s10.only +
+  isochrons$s11.only
+
+isochrons$s9.cumu =
+  isochrons$s9.only +
+  isochrons$s10.only +
+  isochrons$s11.only
+
+isochrons$s10.cumu =
+  isochrons$s10.only +
+  isochrons$s11.only
 
 isochrons = na.omit(isochrons)
 nrow(isochrons)
 ## 5,025
 
-# tm_shape(isochrons) + tm_polygons()
+isochrons$abs.slope = abs(isochrons$slope)
 
 b = isochrons
 st_geometry(b) = NULL
@@ -1176,3 +1230,12 @@ b |> group_by(fire_reg) |> tally() |> as.data.frame()
 # grassy woodland:            141
 
 st_write(isochrons, "isochrons_prep2.gpkg", delete_dsn = T)
+
+# examine data ####
+setwd("E:/chapter3/for GAMs")
+iso = st_read("isochrons_prep2.gpkg")
+iso
+st_geometry(iso) = NULL
+
+cor(iso |> dplyr::select(spread, prog), method = "spearman")
+## 0.81
