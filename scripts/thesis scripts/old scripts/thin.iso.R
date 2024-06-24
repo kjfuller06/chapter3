@@ -24,6 +24,7 @@ g = g %>%
                 ffdi_final,
                 ffdi_cat,
                 elevation_sd,
+                elevation_se,
                 stringybark,
                 stringybark.1,
                 stringybark.9,
