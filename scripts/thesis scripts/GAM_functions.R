@@ -138,15 +138,16 @@ gamplotfun = function(modelnom, response){
   g1 = read.csv(paste0(modelnom, "_plotdata.csv"))
   names(g1)[names(g1) == response] = "response"
   
-  df = g1[ ,sapply(g1, is.integer)]
-  if(ncol(df) > 0){
-    g2 = g1[,names(g1) %in% names(df)]
+  if(any(g1[ ,sapply(g1, is.integer)])){
+    catvars = names(g1)[sapply(g1, is.integer)]
+    g2 = as.data.frame(g1[,names(g1)[sapply(g1, is.integer)]])
+    names(g2) = catvars
     g2$fit = exp(g1$fit)
     g2$ul = exp(g1$fit + g1$CI)
     g2$ll = exp(g1$fit - g1$CI)
     g2$var = g1$var
-    g1 = g1[,!names(g1) %in% names(df)]
-    g1 = g1 |> filter(!(var %in% names(df)))
+    g1 = g1[,!names(g1) %in% catvars]
+    g1 = g1 |> filter(!(var %in% catvars))
     g1$fit = exp(g1$fit)
     g1$ul = exp(g1$ul)
     g1$ll = exp(g1$ll)
