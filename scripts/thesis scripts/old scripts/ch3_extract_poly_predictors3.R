@@ -148,6 +148,7 @@ st_write(g, paste0("ch3_forGAMs_poly_prefire180_wind4.gpkg"), delete_dsn = T)
 # process all outputs ####
 setwd("E:/chapter3/for GAMs")
 g1 = st_read("ch3_forGAMs_poly_prefire180_structure_redo_2-14.gpkg")
+g1$area = as.numeric((st_area(g1)/1000000))
 g1$prog = as.numeric((st_area(g1)/1000000)/g1$progtime)
 
 g2 = st_read("ch3_forGAMs_poly_prefire180_elevation.gpkg") |>
@@ -163,6 +164,22 @@ g2 = g2 |>
   dplyr::select(ID,
                 elevation_sd)
 st_geometry(g2) = NULL
+
+g2.2 = st_read("ch3_forGAMs_poly_prefire180_elevation_redo_6-19.gpkg") |>
+  dplyr::select(ID,
+                elevation_sd)
+g2_issue = g2.2[is.na(g2.2$elevation_sd),]
+st_area(g1[g2.2$ID %in% g2_issue$ID,])
+min(st_area(g1))
+## issues result from very small polygons
+g2.2$elevation_sd[is.na(g2.2$elevation_sd)] = 0
+g2.2 = g2.2 |>
+  dplyr::select(ID,
+                elevation_sd)
+st_geometry(g2.2) = NULL
+names(g2.2)[2] = "elevation_se"
+g2 = full_join(g2, g2.2) |> na.omit()
+cor(g2, method = "spearman")
 
 g3 = st_read("ch3_forGAMs_poly_prefire180_fueltype.gpkg") |>
   dplyr::select(ID,
