@@ -112,7 +112,7 @@ g$fire_reg = as.factor(g$fire_reg)
 
 g$logprog = log(g$prog)
 
-setwd("D:/chapter3/outputs/GAMs")
+setwd("C:/chapter3/outputs")
 gam1 = readRDS(paste0(modelnom, ".rds"))
 rugdat = gam1$model
 
@@ -134,7 +134,7 @@ rugdat.temp$predictor = rugdat.temp$predictor*100
 # write.csv(fit, paste0(modelnom, "_cvrz_predictions_2-15.csv"), row.names = F)
 fit = read.csv(paste0(modelnom, "_cvrz_predictions_2-15.csv"))
 
-g1 = summedallfun(dat = fit, rugdat = rugdat.temp, config = "xy", lab2 = expression("Median understorey cover (%; 10"^th*" percentile)"), 
+g1 = summedallfun(dat = fit, rugdat = rugdat.temp, config = "xy", lab2 = expression(atop("Understorey cover (10"^th*" percentile; %)")), 
                   # ymin = min(fit$ll), ymax = max(fit$ul),
                   ymin = ymin, ymax = ymax,
                   ab2 = max(fit$fit))
@@ -144,6 +144,10 @@ rugdat.temp = rugdat |>
   dplyr::select(logprog,
                 elevation_sd)
 names(rugdat.temp)[2] = "predictor"
+rugdat.temp = rugdat.temp |> 
+  filter(predictor < max(rugdat.temp$predictor))
+rugdat.temp = rugdat.temp |> 
+  filter(predictor < max(rugdat.temp$predictor))
 
 # p1 = plot_smooth(gam1, view = "elevation_sd", n.grid = 1000, transform = exp)
 # p1 = p1$fv
@@ -152,7 +156,9 @@ names(rugdat.temp)[2] = "predictor"
 # write.csv(fit, paste0(modelnom, "_elev_predictions_2-15.csv"), row.names = F)
 fit = read.csv(paste0(modelnom, "_elev_predictions_2-15.csv"))
 
-g2 = summedallfun(dat = fit, rugdat = rugdat.temp, config = "xy", lab2 = "Standard deviation in elevation (m)", 
+fit = fit |> 
+  filter(x < max(rugdat.temp$predictor))
+g2 = summedallfun(dat = fit, rugdat = rugdat.temp, config = "xy", lab2 = "Elevation\n(standard deviation; m)", 
                   # ymin = min(fit$ll), ymax = max(fit$ul),
                   ymin = ymin, ymax = 5,
                   ab2 = max(fit$fit))
@@ -200,7 +206,7 @@ g3 =
   ggplot(fit) +
   geom_boxplot(aes(x = x, middle = fit, ymin = ll, lower = ll, upper = ul, ymax = ul, fill = x, group = x), stat= "identity", alpha = 0.15) +
   scale_fill_manual(values = c("black", "grey60")) +
-  xlab("Median stringybark prediction") +
+  xlab("Stringybark prediction\n(median)") +
   theme_bw() +
   theme(legend.position = "none",
         axis.ticks.y=element_blank(),
@@ -214,11 +220,73 @@ g3 =
   # geom_point(aes(x = x, y = fit)) +
   ylim(ymin, ymax)
 
+# # vegetation types ####
+# rugdat.temp = rugdat |>
+#   dplyr::select(logprog,
+#                 fire_reg)
+# names(rugdat.temp)[2] = "predictor"
+# 
+# medians = read.csv(paste0(modelnom, "_medianvaluesforplotting.csv"))
+# medians = medians$median
+# 
+# test.temp = expand.grid(cover_z_1.1 = medians[1],
+#                         elevation_sd = medians[2],
+#                         stringybark = 0,
+#                         LFMC.1 = medians[4],
+#                         VPD = medians[5],
+#                         winddir.stdev = medians[6],
+#                         windspeed.stdev = medians[7],
+#                         hydro4.9 = medians[8],
+#                         fire_reg = c(1, 2, 3, 4, 5, 6, 8, 13))
+# test.temp$stringybark = as.factor(test.temp$stringybark)
+# test.temp$fire_reg = as.factor(test.temp$fire_reg)
+# 
+# preds<-predict(gam1, type="terms", newdata=test.temp,
+#                se.fit=TRUE)
+# 
+# x = test.temp$fire_reg
+# preds.temp = rowSums(preds$fit) + coef(gam1)[1]
+# fit = data.frame(fit = preds.temp, x = x)
+# fit$ll = fit$fit - 1.96*preds$se.fit[,1]
+# fit$ll = exp(gam1$family$linkinv(fit$ll))
+# fit$ul = fit$fit + 1.96*preds$se.fit[,1]
+# fit$ul = exp(gam1$family$linkinv(fit$ul))
+# fit$fit = exp(fit$fit)
+# fit$ymax = fit$ul + 0.1
+# fit$ymin = fit$ll - 0.1
+# 
+# write.csv(fit, paste0(modelnom, "_fire_reg_predictions_2-15.csv"), row.names = F)
+# fit = read.csv(paste0(modelnom, "_fire_reg_predictions_2-15.csv"))
+# # fit$x[fit$x == 0] = "Absent"
+# # fit$x[fit$x == 1] = "Present"
+# # fit$x = factor(fit$x, level = c("Present", "Absent"))
+# fit$x = as.factor(fit$x)
+# 
+# g3 =
+#   ggplot(fit) +
+#   geom_boxplot(aes(x = x, middle = fit, ymin = ll, lower = ll, upper = ul, ymax = ul, fill = x, group = x), stat= "identity", alpha = 0.15) +
+#   # scale_fill_manual(values = c("black", "grey60")) +
+#   xlab("Stringybark prediction\n(median)") +
+#   theme_bw() +
+#   theme(legend.position = "none",
+#         axis.ticks.y=element_blank(),
+#         axis.text.y=element_blank(),
+#         text = element_text(size = 20),
+#         axis.title.y = 
+#           element_text(margin = 
+#                          ggplot2::margin( 
+#                            l = -15))) +
+#   theme(plot.margin = unit(c(0.1,0.1,0,0.1), "cm"))
+#   # geom_point(aes(x = x, y = fit)) +
+#   # ylim(ymin, ymax)
+# 
 # LFMC.1 ####
 rugdat.temp = rugdat |>
   dplyr::select(logprog,
                 LFMC.1)
 names(rugdat.temp)[2] = "predictor"
+rugdat.temp = rugdat.temp |> 
+  filter(predictor < 181)
 
 # p1 = plot_smooth(gam1, view = "LFMC.1", n.grid = 1000, transform = exp)
 # p1 = p1$fv
@@ -227,7 +295,9 @@ names(rugdat.temp)[2] = "predictor"
 # write.csv(fit, paste0(modelnom, "_lfmc_predictions_2-15.csv"), row.names = F)
 fit = read.csv(paste0(modelnom, "_lfmc_predictions_2-15.csv"))
 
-g4 = summedallfun(dat = fit, rugdat = rugdat.temp, config = "x", lab2 = expression("Live fuel moisture content (%; 10"^th*" percentile)"), 
+fit = fit |> 
+  filter(x < max(rugdat.temp$predictor))
+g4 = summedallfun(dat = fit, rugdat = rugdat.temp, config = "x", lab2 = expression(atop("Live fuel moisture content (10"^th*" percentile; %)")), 
                   # ymin = min(fit$ll), ymax = max(fit$ul),
                   ymin = ymin, ymax = ymax,
                   ab2 = max(fit$fit))
@@ -237,6 +307,8 @@ rugdat.temp = rugdat |>
   dplyr::select(logprog,
                 VPD)
 names(rugdat.temp)[2] = "predictor"
+rugdat.temp = rugdat.temp |> 
+  filter(predictor < max(rugdat.temp$predictor))
 
 # p1 = plot_smooth(gam1, view = "VPD", n.grid = 1000, transform = exp)
 # p1 = p1$fv
@@ -245,7 +317,9 @@ names(rugdat.temp)[2] = "predictor"
 # write.csv(fit, paste0(modelnom, "_vpd_predictions_2-15.csv"), row.names = F)
 fit = read.csv(paste0(modelnom, "_vpd_predictions_2-15.csv"))
 
-g5 = summedallfun(dat = fit, rugdat = rugdat.temp, config = "x", lab2 = "Median vapour pressure deficit (kPa)", 
+fit = fit |> 
+  filter(x < max(rugdat.temp$predictor))
+g5 = summedallfun(dat = fit, rugdat = rugdat.temp, config = "x", lab2 = "Vapour pressure deficit\n(median; kPa)", 
                   # ymin = min(fit$ll), ymax = max(fit$ul),
                   ymin = ymin, ymax = ymax,
                   ab2 = max(fit$fit))
@@ -263,7 +337,7 @@ g5 = summedallfun(dat = fit, rugdat = rugdat.temp, config = "x", lab2 = "Median 
 # # write.csv(fit, paste0(modelnom, "_windsgust_predictions_2-15.csv"), row.names = F)
 # fit = read.csv(paste0(modelnom, "_windsgust_predictions_2-15.csv"))
 # 
-# g6 = summedallfun(dat = fit, rugdat = rugdat.temp, config = "x", lab2 = "Median wind gust speed (km/hr)", 
+# g6 = summedallfun(dat = fit, rugdat = rugdat.temp, config = "x", lab2 = "Wind gust speed (median; km/hr)", 
 #                   # ymin = min(fit$ll), ymax = max(fit$ul),
 #                   ymin = ymin, ymax = ymax,
 #                   ab2 = max(fit$fit))
@@ -273,6 +347,8 @@ rugdat.temp = rugdat |>
   dplyr::select(logprog,
                 windspeed.stdev)
 names(rugdat.temp)[2] = "predictor"
+rugdat.temp = rugdat.temp |> 
+  filter(predictor < max(rugdat.temp$predictor))
 
 # p1 = plot_smooth(gam1, view = "windspeed.stdev", n.grid = 1000, transform = exp)
 # p1 = p1$fv
@@ -281,7 +357,9 @@ names(rugdat.temp)[2] = "predictor"
 # write.csv(fit, paste0(modelnom, "_windspeedstdev_predictions_2-15.csv"), row.names = F)
 fit = read.csv(paste0(modelnom, "_windspeedstdev_predictions_2-15.csv"))
 
-g7 = summedallfun(dat = fit, rugdat = rugdat.temp, config = "x", lab2 = "Standard deviation in wind speed (km/h)", 
+fit = fit |> 
+  filter(x < max(rugdat.temp$predictor))
+g7 = summedallfun(dat = fit, rugdat = rugdat.temp, config = "x", lab2 = "Wind speed\n(standard deviation; km/h)", 
                   # ymin = min(fit$ll), ymax = max(fit$ul),
                   ymin = ymin, ymax = ymax,
                   ab2 = max(fit$fit))
@@ -292,7 +370,15 @@ rugdat.temp = rugdat |>
                 winddir.stdev)
 names(rugdat.temp)[2] = "predictor"
 rugdat.temp = rugdat.temp |> 
-  filter(predictor < 147)
+  filter(predictor < max(rugdat.temp$predictor))
+rugdat.temp = rugdat.temp |> 
+  filter(predictor < max(rugdat.temp$predictor))
+rugdat.temp = rugdat.temp |> 
+  filter(predictor < max(rugdat.temp$predictor))
+rugdat.temp = rugdat.temp |> 
+  filter(predictor < max(rugdat.temp$predictor))
+rugdat.temp = rugdat.temp |> 
+  filter(predictor < max(rugdat.temp$predictor))
 
 # p1 = plot_smooth(gam1, view = "winddir.stdev", n.grid = 1000, transform = exp)
 # p1 = p1$fv
@@ -301,7 +387,9 @@ rugdat.temp = rugdat.temp |>
 # write.csv(fit, paste0(modelnom, "_winddirstdev_predictions_2-15.csv"), row.names = F)
 fit = read.csv(paste0(modelnom, "_winddirstdev_predictions_2-15.csv"))
 
-g8 = summedallfun(dat = fit, rugdat = rugdat.temp, config = "xy", lab2 = "Standard deviation in wind direction (degrees)", 
+fit = fit |> 
+  filter(x < max(rugdat.temp$predictor))
+g8 = summedallfun(dat = fit, rugdat = rugdat.temp, config = "xy", lab2 = "Wind direction\n(standard deviation; degrees)", 
                   # ymin = min(fit$ll), ymax = max(fit$ul),
                   ymin = ymin, ymax = ymax,
                   ab2 = max(fit$fit))
@@ -313,6 +401,8 @@ rugdat.temp = rugdat |>
                 hydro4.9)
 names(rugdat.temp)[2] = "predictor"
 rugdat.temp$predictor = rugdat.temp$predictor/1000
+rugdat.temp = rugdat.temp |> 
+  filter(predictor < max(rugdat.temp$predictor))
 
 # p1 = plot_smooth(gam1, view = "hydro4.9", n.grid = 1000, transform = exp)
 # p1 = p1$fv
@@ -322,28 +412,30 @@ rugdat.temp$predictor = rugdat.temp$predictor/1000
 fit = read.csv(paste0(modelnom, "_water_predictions_2-15.csv"))
 fit$x = fit$x/1000
 
-g9 = summedallfun(dat = fit, rugdat = rugdat.temp, config = "xymin", lab2 = expression("Median distance to water (km; 90"^th*" percentile)"), 
+fit = fit |> 
+  filter(x < max(rugdat.temp$predictor))
+g9 = summedallfun(dat = fit, rugdat = rugdat.temp, config = "xymin", lab2 = expression(atop("Distance to water (90"^th*" percentile; km)")), 
                   # ymin = min(fit$ll), ymax = max(fit$ul),
                   ymin = ymin, ymax = ymax,
                   ab2 = max(fit$fit))
 # plots ####
 
-setwd("D:/chapter3/outputs/GAMs")
+setwd("C:/chapter3/outputs")
 plots = 
   (plot_grid(g2, g9, g8, g7, g5, g4, g1, g3, align = "hv", axis = "tblr")) +
   plot_annotation(tag_levels = 'a') & 
   theme(plot.tag = element_text(size = 12))
-ggexport(plots, filename = paste0("GAMiso_redo_2-15.jpeg"), width = 3000, height = 3000, res = 250)
+ggexport(plots, filename = paste0("GAMiso_redo_2-15.jpg"), width = 4000, height = 4000, res = 250)
 
-ggexport(g1, filename = paste0("understorey_redo_2-15.png"), width = 1000, height = 1000, res = 250)
-ggexport(g2, filename = paste0("elevation_redo_2-15.png"), width = 1000, height = 1000, res = 250)
-ggexport(g3, filename = paste0("stringybark_redo_2-15.png"), width = 1000, height = 1000, res = 250)
-ggexport(g4, filename = paste0("LFMC_redo_2-15.png"), width = 1000, height = 1000, res = 250)
-ggexport(g5, filename = paste0("VPD_redo_2-15.png"), width = 1000, height = 1000, res = 250)
-# ggexport(g6, filename = paste0("windgust_redo_2-15.png"), width = 1000, height = 1000, res = 250)
-ggexport(g7, filename = paste0("windspeed.stdev_redo_2-15.png"), width = 1000, height = 1000, res = 250)
-ggexport(g8, filename = paste0("winddir.stdev_redo_2-15.png"), width = 1000, height = 1000, res = 250)
-ggexport(g9, filename = paste0("hydro4_redo_2-15.png"), width = 1000, height = 1000, res = 250)
+ggexport(g1, filename = paste0("understorey_redo_2-15.jpg"), width = 1000, height = 1000, res = 250)
+ggexport(g2, filename = paste0("elevation_redo_2-15.jpg"), width = 1000, height = 1000, res = 250)
+ggexport(g3, filename = paste0("stringybark_redo_2-15.jpg"), width = 1000, height = 1000, res = 250)
+ggexport(g4, filename = paste0("LFMC_redo_2-15.jpg"), width = 1000, height = 1000, res = 250)
+ggexport(g5, filename = paste0("VPD_redo_2-15.jpg"), width = 1000, height = 1000, res = 250)
+# ggexport(g6, filename = paste0("windgust_redo_2-15.jpg"), width = 1000, height = 1000, res = 250)
+ggexport(g7, filename = paste0("windspeed.stdev_redo_2-15.jpg"), width = 1000, height = 1000, res = 250)
+ggexport(g8, filename = paste0("winddir.stdev_redo_2-15.jpg"), width = 1000, height = 1000, res = 250)
+ggexport(g9, filename = paste0("hydro4_redo_2-15.jpg"), width = 1000, height = 1000, res = 250)
 
 ## set zoom to 100%
 (g2 | g9)/(g8 |g7|g5)/(g4|g1|g3)
@@ -391,7 +483,7 @@ t1 =
   tm_layout(inner.margins = 0)
 # t1
 
-setwd("D:/chapter3/outputs/GAMs")
+setwd("C:/chapter3/outputs")
 # tmap_save(t1, "firepolygons.jpg", height = 3000, width = 2000, units = "px")
 tmap_save(t1, "firepolygons_redo_2-15.jpg", height = 3000, width = 2000, units = "px")
 
@@ -399,7 +491,7 @@ t1 =
   tm_shape(g) + tm_fill(col = "prog", palette = turbo(20)[14:20])
 t1
 
-setwd("D:/chapter3/outputs/GAMs")
+setwd("C:/chapter3/outputs")
 tmap_save(t1, "polygons_legend.jpg", height = 3000, width = 2000, units = "px")
 
 # t1 =
