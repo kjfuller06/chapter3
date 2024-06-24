@@ -7,9 +7,9 @@ library(MASS)
 library(UBL)
 
 setwd("E:/chapter3/for GAMs")
-g = st_read("isochrons_prep6.gpkg")
+g = st_read("isochrons_prep2.gpkg")
 nrow(g)
-## 58,556
+## 5,025
 
 g$fire_reg = as.factor(g$fire_reg)
 targetcrs = st_crs(g)
@@ -26,22 +26,17 @@ g = g %>%
                 spread,
                 logspread,
                 fire_reg,
-                rh98:Gmethod,
-                rh98.dist:Gmethod.dist,
-                meanffd:ffdi_final,
+                rh98.12.5:fhd_normal.12.5,
+                ffdi_final,
                 ffdi_cat,
-                rough.1:slope.9,
-                elev.1:elev.9,
+                abs.slope,
+                rough.1:w.s.speed.mag,
                 stringybark.1:ribbonbark.9,
-                LFMC:winddir,
-                windnorth,
-                windeast,
-                strahler4:strahler11,
-                s4:s11,
-                strahler4.only:strahler11.only,
-                s4.only:s11.only)
+                LFMC:winddir2,
+                s4.only:s11.only,
+                s4.cumu:s10.cumu)
 nrow(g)
-## 58,556
+## 5,025
 g$ffdi_cat = factor(g$ffdi_cat, levels = c("one",
                                            "two",
                                            "three",
@@ -53,16 +48,16 @@ sb = g %>%
   initial_split(strata = spread, prop = 7/10, seed = 15)
 test = testing(sb)
 nrow(test)
-## 17,569
+## 1,509
 write.csv(test, "testingset_isochrons.csv", row.names = F)
 
 train = training(sb)
 nrow(train)
-## 40,987
+## 3,516
 write.csv(train, "trainingset_isochrons.csv", row.names = F)
 
 train |> group_by(ffdi_cat) |> tally()
-# one:        8975
-# two:        18682
-# three:      11432
-# four:       1898
+# one:        382
+# two:        1,375
+# three:      1,367
+# four:       392
