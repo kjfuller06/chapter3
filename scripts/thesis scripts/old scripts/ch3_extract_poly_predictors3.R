@@ -3,11 +3,153 @@ library(raster)
 library(tidyverse)
 library(exactextractr)
 library(rgeos)
+library(circular)
 
 # wind quantiles ####
 # setwd("/glade/scratch/kjfuller/data/chapter3")
 setwd("E:/chapter3/for GAMs")
 g = st_read("ch3_forGAMs_poly_prefire180_final_redo.gpkg")
+targetcrs = st_crs(g)
+g = g |>
+  dplyr::select(ID,
+                poly_sD,
+                poly_eD)
+
+index = g |>
+  dplyr::select(poly_sD,
+                poly_eD)
+st_geometry(index) = NULL
+index = unique(index)
+index$index = c(1:nrow(index))
+g = g |>
+  left_join(index)
+
+g_buffer = st_buffer(g, dist = 100000)
+
+# setwd("/glade/scratch/kjfuller/data")
+setwd("E:/chapter3/from Michael")
+wind = st_read("wind_direction.gpkg")
+wind = st_transform(wind, crs = st_crs(g))
+
+stations = wind |>
+  dplyr::select(station)
+stations = stations[!duplicated(stations$station),]
+st_geometry(wind) = NULL
+
+counter <- 0
+l <- list(NULL)
+size <- 1
+windfun = function(x){
+  if( .GlobalEnv$counter == .GlobalEnv$size )
+  {length(.GlobalEnv$l) <- .GlobalEnv$size <- .GlobalEnv$size * 2}
+  
+  tryCatch({
+    # select a buffered polygon and index all stations within 100km
+    g_temp = g_buffer[g_buffer$index == unique(g_buffer$index)[x],]
+    stat_temp = stations[g_temp,]
+    
+    # select the original polygon and calculate distance from centroid to selected stations
+    g_temp = g |>
+      filter(ID %in% g_temp$ID)
+    g_center = st_centroid(g_temp)
+    dist = as.data.frame(st_distance(g_temp, stat_temp))
+    st_geometry(stat_temp) = NULL
+    st_geometry(g_temp) = NULL
+    stat_temp = cbind(stat_temp, t(dist))
+    
+    # select wind data based on polygon timeframe
+    wind_temp = wind |>
+      filter(station %in% stat_temp$station) |>
+      left_join(stat_temp)
+    minT = wind_temp |>
+      filter(DateTime <= min(g_temp$poly_sD))
+    minT = max(minT$DateTime, na.rm = T)
+    maxT = wind_temp |>
+      filter(DateTime >= max(g_temp$poly_eD))
+    maxT = min(maxT$DateTime, na.rm = T)
+    wind_temp = wind_temp |>
+      filter(DateTime >= minT) |>
+      filter(DateTime <= maxT)
+    
+    # calculate the median wind speed within the polygon timeframe at each selected station, join to station data
+    windsp1 = aggregate(data = wind_temp, windspeed ~ station, FUN = function(x) sd(x, na.rm = T))
+    names(windsp1)[2] = "windspeed.stdev"
+    windsp2 = aggregate(data = wind_temp, windspeed ~ station, FUN = function(x) median(x, na.rm = T))
+    names(windsp2)[2] = "windspeed"
+    windsp3 = aggregate(data = wind_temp, windspeed ~ station, FUN = function(x) quantile(x, probs = 0.1, na.rm = T))
+    names(windsp3)[2] = "windspeed.1"
+    windsp4 = aggregate(data = wind_temp, windspeed ~ station, FUN = function(x) quantile(x, probs = 0.9, na.rm = T))
+    names(windsp4)[2] = "windspeed.9"
+    
+    windgt1 = aggregate(data = wind_temp, windgust ~ station, FUN = function(x) sd(x, na.rm = T))
+    names(windgt1)[2] = "windgust.stdev"
+    windgt2 = aggregate(data = wind_temp, windgust ~ station, FUN = function(x) median(x, na.rm = T))
+    names(windgt2)[2] = "windgust"
+    windgt3 = aggregate(data = wind_temp, windgust ~ station, FUN = function(x) quantile(x, probs = 0.9, na.rm = T))
+    names(windgt3)[2] = "windgust.9"
+    
+    winddir1 = aggregate(data = wind_temp, winddir ~ station, FUN = function(x) median(x[x != 0], na.rm = T))
+    names(winddir1)[2] = "winddir"
+    winddir2 = aggregate(data = wind_temp, winddir ~ station, FUN = function(x) sircular::sd(x[x != 0], na.rm = T)*(180/pi))
+    names(winddir2)[2] = "winddir.stdev"
+    
+    wind_temp = stat_temp |>
+      full_join(windsp1) |>
+      full_join(windsp2) |>
+      full_join(windsp3) |>
+      full_join(windsp4) |>
+      full_join(windgt1) |>
+      full_join(windgt2) |>
+      full_join(windgt3) |>
+      full_join(winddir1) |>
+      full_join(winddir2)
+    
+    weights = wind_temp |> dplyr::select(c(2:(ncol(wind_temp) - 9)))
+    weights[weights > 100000] = 100000
+    
+    # create distance-based weights and calculate distance-weighted mean and wind impact index
+    weights = as.data.frame(lapply(weights, function(x) {1 - (x/100000)}))
+    g_temp$windspeed.stdev = as.numeric(lapply(weights,
+                                               function(x) {weighted.mean(wind_temp[,"windspeed.stdev"], x, na.rm = T)}))
+    g_temp$windspeed = as.numeric(lapply(weights,
+                                         function(x) {weighted.mean(wind_temp[,"windspeed"], x, na.rm = T)}))
+    g_temp$windspeed.1 = as.numeric(lapply(weights,
+                                           function(x) {weighted.mean(wind_temp[,"windspeed.1"], x, na.rm = T)}))
+    g_temp$windspeed.9 = as.numeric(lapply(weights,
+                                           function(x) {weighted.mean(wind_temp[,"windspeed.9"], x, na.rm = T)}))
+    g_temp$windgust.stdev = as.numeric(lapply(weights,
+                                              function(x) {weighted.mean(wind_temp[,"windgust.stdev"], x, na.rm = T)}))
+    g_temp$windgust = as.numeric(lapply(weights,
+                                        function(x) {weighted.mean(wind_temp[,"windgust"], x, na.rm = T)}))
+    g_temp$windgust.9 = as.numeric(lapply(weights,
+                                          function(x) {weighted.mean(wind_temp[,"windgust.9"], x, na.rm = T)}))
+    g_temp$winddir.stdev = as.numeric(lapply(weights,
+                                             function(x) {weighted.mean(wind_temp[,"winddir.stdev"], x, na.rm = T)}))
+    g_temp$winddir = as.numeric(lapply(weights,
+                                       function(x) {weighted.mean(wind_temp[,"winddir"], x, na.rm = T)}))
+    
+    .GlobalEnv$counter <- .GlobalEnv$counter + 1
+    .GlobalEnv$l[[.GlobalEnv$counter]] <- g_temp
+    
+  }, error = function(e){print(x); cat("ERROR :", conditionMessage(e), "\n")})
+}
+for(i in c(1:length(unique(g_buffer$index)))){
+  windfun(i)
+  print(i)
+}
+print("binding rows")
+g_temp = bind_rows(l)
+setwd("E:/chapter3/for GAMs")
+write.csv(g_temp, "ch3_forGAMs_poly_prefire180_wind4.csv", row.names = F)
+
+print("joining to original isochron data")
+g = left_join(g, g_temp)
+st_write(g, paste0("ch3_forGAMs_poly_prefire180_wind4.gpkg"), delete_dsn = T)
+
+# wind quantiles ####
+# setwd("/glade/scratch/kjfuller/data/chapter3")
+setwd("E:/chapter3/for GAMs")
+g = st_read("ch3_forGAMs_poly_prefire180_final_redo_2-15.gpkg")
 targetcrs = st_crs(g)
 g = g |>
   dplyr::select(ID,
@@ -71,61 +213,30 @@ windfun = function(x){
       filter(DateTime <= maxT)
 
     # calculate the median wind speed within the polygon timeframe at each selected station, join to station data
-    windsp1 = aggregate(data = wind_temp, windspeed ~ station, FUN = function(x) sd(x, na.rm = T))
-    names(windsp1)[2] = "windspeed.stdev"
-    windsp2 = aggregate(data = wind_temp, windspeed ~ station, FUN = function(x) median(x, na.rm = T))
-    names(windsp2)[2] = "windspeed"
-    windsp3 = aggregate(data = wind_temp, windspeed ~ station, FUN = function(x) quantile(x, probs = 0.1, na.rm = T))
-    names(windsp3)[2] = "windspeed.1"
-    windsp4 = aggregate(data = wind_temp, windspeed ~ station, FUN = function(x) quantile(x, probs = 0.9, na.rm = T))
-    names(windsp4)[2] = "windspeed.9"
-
-    windgt1 = aggregate(data = wind_temp, windgust ~ station, FUN = function(x) sd(x, na.rm = T))
-    names(windgt1)[2] = "windgust.stdev"
-    windgt2 = aggregate(data = wind_temp, windgust ~ station, FUN = function(x) median(x, na.rm = T))
-    names(windgt2)[2] = "windgust"
-    windgt3 = aggregate(data = wind_temp, windgust ~ station, FUN = function(x) quantile(x, probs = 0.9, na.rm = T))
-    names(windgt3)[2] = "windgust.9"
-
-    winddir1 = aggregate(data = wind_temp, winddir ~ station, FUN = function(x) median(x[x != 0], na.rm = T))
-    names(winddir1)[2] = "winddir"
-    winddir2 = aggregate(data = wind_temp, winddir ~ station, FUN = function(x) sd(x[x != 0], na.rm = T))
-    names(winddir2)[2] = "winddir.stdev"
+    windnorth = aggregate(data = wind_temp, winddir ~ station, FUN = function(x) median(cos(x*(pi/180)), na.rm = T))
+    names(windnorth)[2] = "wind.north"
+    windeast = aggregate(data = wind_temp, winddir ~ station, FUN = function(x) median(sin(x*(pi/180)), na.rm = T))
+    names(windeast)[2] = "wind.east"
+    winddir2 = aggregate(data = wind_temp, winddir ~ station, FUN = function(x) circular::sd(x, na.rm = T))
+    names(winddir2)[2] = "winddir.circSD"
 
     wind_temp = stat_temp |>
-      full_join(windsp1) |>
-      full_join(windsp2) |>
-      full_join(windsp3) |>
-      full_join(windsp4) |>
-      full_join(windgt1) |>
-      full_join(windgt2) |>
-      full_join(windgt3) |>
-      full_join(winddir1) |>
+      full_join(windnorth) |>
+      full_join(windeast) |> 
       full_join(winddir2)
 
-    weights = wind_temp |> dplyr::select(c(2:(ncol(wind_temp) - 9)))
+    weights = wind_temp |> dplyr::select(c(2:(ncol(wind_temp) - 3)))
     weights[weights > 100000] = 100000
 
     # create distance-based weights and calculate distance-weighted mean and wind impact index
     weights = as.data.frame(lapply(weights, function(x) {1 - (x/100000)}))
-    g_temp$windspeed.stdev = as.numeric(lapply(weights,
-                                               function(x) {weighted.mean(wind_temp[,"windspeed.stdev"], x, na.rm = T)}))
-    g_temp$windspeed = as.numeric(lapply(weights,
-                                         function(x) {weighted.mean(wind_temp[,"windspeed"], x, na.rm = T)}))
-    g_temp$windspeed.1 = as.numeric(lapply(weights,
-                                         function(x) {weighted.mean(wind_temp[,"windspeed.1"], x, na.rm = T)}))
-    g_temp$windspeed.9 = as.numeric(lapply(weights,
-                                         function(x) {weighted.mean(wind_temp[,"windspeed.9"], x, na.rm = T)}))
-    g_temp$windgust.stdev = as.numeric(lapply(weights,
-                                        function(x) {weighted.mean(wind_temp[,"windgust.stdev"], x, na.rm = T)}))
-    g_temp$windgust = as.numeric(lapply(weights,
-                                              function(x) {weighted.mean(wind_temp[,"windgust"], x, na.rm = T)}))
-    g_temp$windgust.9 = as.numeric(lapply(weights,
-                                              function(x) {weighted.mean(wind_temp[,"windgust.9"], x, na.rm = T)}))
-    g_temp$winddir.stdev = as.numeric(lapply(weights,
-                                              function(x) {weighted.mean(wind_temp[,"winddir.stdev"], x, na.rm = T)}))
-    g_temp$winddir = as.numeric(lapply(weights,
-                                             function(x) {weighted.mean(wind_temp[,"winddir"], x, na.rm = T)}))
+    
+    g_temp$windnorth = as.numeric(lapply(weights,
+                                       function(x) {weighted.mean(wind_temp[,"wind.north"], x, na.rm = T)}))
+    g_temp$windeast = as.numeric(lapply(weights,
+                                         function(x) {weighted.mean(wind_temp[,"wind.east"], x, na.rm = T)}))
+    g_temp$winddir.circSD = as.numeric(lapply(weights,
+                                              function(x) {weighted.mean(wind_temp[,"winddir.circSD"], x, na.rm = T)}))
 
     .GlobalEnv$counter <- .GlobalEnv$counter + 1
     .GlobalEnv$l[[.GlobalEnv$counter]] <- g_temp
@@ -139,11 +250,11 @@ for(i in c(1:length(unique(g_buffer$index)))){
 print("binding rows")
 g_temp = bind_rows(l)
 setwd("E:/chapter3/for GAMs")
-write.csv(g_temp, "ch3_forGAMs_poly_prefire180_wind4.csv", row.names = F)
+write.csv(g_temp, "ch3_forGAMs_poly_prefire180_wind_v2.csv", row.names = F)
 
 print("joining to original isochron data")
 g = left_join(g, g_temp)
-st_write(g, paste0("ch3_forGAMs_poly_prefire180_wind4.gpkg"), delete_dsn = T)
+st_write(g, paste0("ch3_forGAMs_poly_prefire180_wind_v2.gpkg"), delete_dsn = T)
 
 # process all outputs ####
 setwd("E:/chapter3/for GAMs")
@@ -165,21 +276,21 @@ g2 = g2 |>
                 elevation_sd)
 st_geometry(g2) = NULL
 
-g2.2 = st_read("ch3_forGAMs_poly_prefire180_elevation_redo_6-19.gpkg") |>
-  dplyr::select(ID,
-                elevation_sd)
-g2_issue = g2.2[is.na(g2.2$elevation_sd),]
-st_area(g1[g2.2$ID %in% g2_issue$ID,])
-min(st_area(g1))
-## issues result from very small polygons
-g2.2$elevation_sd[is.na(g2.2$elevation_sd)] = 0
-g2.2 = g2.2 |>
-  dplyr::select(ID,
-                elevation_sd)
-st_geometry(g2.2) = NULL
-names(g2.2)[2] = "elevation_se"
-g2 = full_join(g2, g2.2) |> na.omit()
-cor(g2, method = "spearman")
+# g2.2 = st_read("ch3_forGAMs_poly_prefire180_elevation_redo_6-19.gpkg") |>
+#   dplyr::select(ID,
+#                 elevation_sd)
+# g2_issue = g2.2[is.na(g2.2$elevation_sd),]
+# st_area(g1[g2.2$ID %in% g2_issue$ID,])
+# min(st_area(g1))
+# ## issues result from very small polygons
+# g2.2$elevation_sd[is.na(g2.2$elevation_sd)] = 0
+# g2.2 = g2.2 |>
+#   dplyr::select(ID,
+#                 elevation_sd)
+# st_geometry(g2.2) = NULL
+# names(g2.2)[2] = "elevation_se"
+# g2 = full_join(g2, g2.2) |> na.omit()
+# cor(g2, method = "spearman")
 
 g3 = st_read("ch3_forGAMs_poly_prefire180_fueltype.gpkg") |>
   dplyr::select(ID,
@@ -266,7 +377,7 @@ st_geometry(g16) = NULL
 summary(g16)
 g16 = g16 |>
   filter(!is.na(windspeed.9)) |>
-  filter(!is.na(winddir.stdev)) |>
+  # filter(!is.na(winddir.stdev)) |>
   dplyr::select(ID,
                 winddir,
                 winddir.stdev,
@@ -293,7 +404,17 @@ any(g16$windspeed > g16$windgust.9)
 ## FALSE
 any(g16$winddir < 0 | g16$winddir > 359)
 ## FALSE
-cor(g16 |> dplyr::select(windspeed.stdev, windgust.stdev, winddir.stdev), method = "spearman")
+
+g16.2 = st_read("ch3_forGAMs_poly_prefire180_wind_v2.gpkg")
+st_geometry(g16.2) = NULL
+summary(g16.2)
+g16.2 = g16.2 |> 
+  dplyr::select(ID, windnorth:winddir.circSD)
+
+g16 = left_join(g16, g16.2)
+g16 = g16 |> 
+  filter(!is.na(winddir.circSD))
+cor(g16 |> dplyr::select(windspeed.stdev, windspeed, windgust.stdev, windgust, winddir, windnorth, windeast, winddir.stdev, winddir.circSD), method = "spearman")
 
 g = g1 |>
   left_join(g2) |>
@@ -321,7 +442,7 @@ g = g1 |>
   # filter(prog < 200) |>
   # filter(fire_reg < 16) |>
   filter(!is.na(windspeed.9)) |>
-  filter(!is.na(winddir.stdev)) |>
+  filter(!is.na(winddir.circSD)) |>
   filter(!is.na(windgust.stdev)) |>
   filter(!is.na(ribbonbark)) |>
   filter(!is.na(stringybark))
@@ -366,5 +487,5 @@ summary(gref)
 nrow(gref)
 ## 1,690
 setwd("E:/chapter3/for GAMs")
-st_write(gref, "ch3_forGAMs_poly_prefire180_final_redo_2-15.gpkg", delete_dsn = T)
-
+# st_write(gref, "ch3_forGAMs_poly_prefire180_final_redo_2-15.gpkg", delete_dsn = T)
+st_write(gref, "ch3_forGAMs_poly_prefire180_final_redo_7-1.gpkg", delete_dsn = T)
